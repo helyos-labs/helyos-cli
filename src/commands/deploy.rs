@@ -17,25 +17,30 @@ pub async fn deploy(client: &NexaClient, file: &str) -> Result<()> {
     let name = spec.deployment.name.clone();
     let replicas = spec.replicas;
 
-    let spinner = output::Spinner::new(&format!(
-        "Deploying {name} ({replicas} replica{}) to project '{project}'...",
-        if replicas > 1 { "s" } else { "" }
-    ));
+    let spinner = if !output::is_json_mode() {
+        Some(output::Spinner::new(&format!(
+            "Deploying {name} ({replicas} replica{}) to project '{project}'...",
+            if replicas > 1 { "s" } else { "" }
+        )))
+    } else {
+        None
+    };
 
     let yaml = std::fs::read_to_string(path)?;
     let deployment: Deployment = client.post_yaml("/api/v1/deploy", &yaml).await?;
 
     if output::is_json_mode() {
-        spinner.finish_clear();
         output::print_json(&serde_json::json!({"status": "ok", "deployment": deployment}));
         return Ok(());
     }
 
-    spinner.finish_success(&format!(
-        "Deployment '{name}' is {:?} (id: {})",
-        deployment.status,
-        &deployment.id.to_string()[..8]
-    ));
+    if let Some(s) = spinner {
+        s.finish_success(&format!(
+            "Deployment '{name}' is {} (id: {})",
+            deployment.status,
+            &deployment.id.to_string()[..8]
+        ));
+    }
 
     Ok(())
 }

@@ -13,11 +13,7 @@ pub async fn deployments(client: &NexaClient, project: Option<&str>) -> Result<(
     let deployments: Vec<Deployment> = client.get(&path).await?;
 
     if output::is_json_mode() {
-        let json_deployments: Vec<serde_json::Value> = deployments
-            .iter()
-            .map(|d| serde_json::to_value(d).unwrap())
-            .collect();
-        output::print_json(&json_deployments);
+        output::print_json(&deployments);
         return Ok(());
     }
 
@@ -27,7 +23,7 @@ pub async fn deployments(client: &NexaClient, project: Option<&str>) -> Result<(
             vec![
                 d.name().to_string(),
                 d.project().to_string(),
-                format!("{:?}", d.status),
+                d.status.to_string(),
                 d.spec.replicas.to_string(),
                 d.spec.image.clone(),
                 output::format_age(&d.created_at),

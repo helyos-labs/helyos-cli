@@ -8,11 +8,7 @@ pub async fn list_projects(client: &NexaClient) -> Result<()> {
     let projects: Vec<Project> = client.get("/api/v1/projects").await?;
 
     if output::is_json_mode() {
-        let json_projects: Vec<serde_json::Value> = projects
-            .iter()
-            .map(|p| serde_json::to_value(p).unwrap())
-            .collect();
-        output::print_json(&json_projects);
+        output::print_json(&projects);
         return Ok(());
     }
 

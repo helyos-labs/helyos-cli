@@ -13,11 +13,7 @@ pub async fn pods(client: &NexaClient, project: Option<&str>) -> Result<()> {
     let pods: Vec<Pod> = client.get(&path).await?;
 
     if output::is_json_mode() {
-        let json_pods: Vec<serde_json::Value> = pods
-            .iter()
-            .map(|p| serde_json::to_value(p).unwrap())
-            .collect();
-        output::print_json(&json_pods);
+        output::print_json(&pods);
         return Ok(());
     }
 

@@ -50,12 +50,12 @@ pub fn print_table(headers: &[&str], rows: &[Vec<String>]) {
                 let w = widths.get(i).copied().unwrap_or(cell.len());
                 let formatted = format!("{:<width$}", cell, width = w);
                 if headers.get(i).is_some_and(|h| h.eq_ignore_ascii_case("status")) {
-                    let s = match cell.as_str() {
-                        "Running" => Style::new().green(),
-                        "Degraded" | "Restarting" => Style::new().yellow(),
-                        "Failed" => Style::new().red(),
-                        "Stopped" | "Stopping" => Style::new().dim(),
-                        "Pending" | "Creating" => Style::new().cyan(),
+                    let s = match cell.to_lowercase().as_str() {
+                        "running" => Style::new().green(),
+                        "degraded" | "restarting" => Style::new().yellow(),
+                        "failed" | "crashloopbackoff" => Style::new().red(),
+                        "stopped" | "stopping" => Style::new().dim(),
+                        "pending" | "creating" => Style::new().cyan(),
                         _ => Style::new(),
                     };
                     return format!("{}", s.apply_to(formatted));
