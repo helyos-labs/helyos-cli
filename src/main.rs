@@ -230,19 +230,21 @@ async fn main() -> anyhow::Result<()> {
                 commands::secret::remove(&client, &project, &name).await
             }
         },
-        Commands::Nodes => commands::nodes().await,
+        Commands::Nodes => commands::nodes(&client).await,
     };
 
-    if let Err(e) = &result {
+    if let Err(e) = result {
         let msg = e.to_string();
         if msg.contains("Connection refused") || msg.contains("connect") {
             output::print_error_with_hint(
                 "Cannot connect to nexad",
                 &format!("Is nexad running? Start it with: nexad --host {}", cli.server),
             );
-            std::process::exit(1);
+        } else {
+            output::print_error(&msg);
         }
+        std::process::exit(1);
     }
 
-    result
+    Ok(())
 }

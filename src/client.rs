@@ -55,7 +55,7 @@ impl NexaClient {
             let body = resp.text().await.unwrap_or_default();
             let msg = format_api_error(status, &body);
             if let Some(hint) = error_hint(status) {
-                crate::output::print_error_with_hint(&msg, hint);
+                anyhow::bail!("{msg}\n  hint: {hint}");
             }
             anyhow::bail!("{msg}");
         }
@@ -73,10 +73,10 @@ impl NexaClient {
             .await?;
         let status = resp.status();
         if !status.is_success() {
-            let body = resp.text().await.unwrap_or_default();
-            let msg = format_api_error(status, &body);
+            let resp_body = resp.text().await.unwrap_or_default();
+            let msg = format_api_error(status, &resp_body);
             if let Some(hint) = error_hint(status) {
-                crate::output::print_error_with_hint(&msg, hint);
+                anyhow::bail!("{msg}\n  hint: {hint}");
             }
             anyhow::bail!("{msg}");
         }
@@ -97,7 +97,7 @@ impl NexaClient {
             let body = resp.text().await.unwrap_or_default();
             let msg = format_api_error(status, &body);
             if let Some(hint) = error_hint(status) {
-                crate::output::print_error_with_hint(&msg, hint);
+                anyhow::bail!("{msg}\n  hint: {hint}");
             }
             anyhow::bail!("{msg}");
         }
@@ -112,7 +112,7 @@ impl NexaClient {
             let body = resp.text().await.unwrap_or_default();
             let msg = format_api_error(status, &body);
             if let Some(hint) = error_hint(status) {
-                crate::output::print_error_with_hint(&msg, hint);
+                anyhow::bail!("{msg}\n  hint: {hint}");
             }
             anyhow::bail!("{msg}");
         }
@@ -127,7 +127,7 @@ impl NexaClient {
             let body = resp.text().await.unwrap_or_default();
             let msg = format_api_error(status, &body);
             if let Some(hint) = error_hint(status) {
-                crate::output::print_error_with_hint(&msg, hint);
+                anyhow::bail!("{msg}\n  hint: {hint}");
             }
             anyhow::bail!("{msg}");
         }
@@ -142,7 +142,7 @@ impl NexaClient {
             let body = resp.text().await.unwrap_or_default();
             let msg = format_api_error(status, &body);
             if let Some(hint) = error_hint(status) {
-                crate::output::print_error_with_hint(&msg, hint);
+                anyhow::bail!("{msg}\n  hint: {hint}");
             }
             anyhow::bail!("{msg}");
         }

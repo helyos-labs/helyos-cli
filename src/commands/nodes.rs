@@ -1,7 +1,8 @@
 use anyhow::Result;
+use crate::client::NexaClient;
 use crate::output;
 
-pub async fn nodes() -> Result<()> {
+pub async fn nodes(_client: &NexaClient) -> Result<()> {
     if output::is_json_mode() {
         output::print_json(&serde_json::json!({
             "nodes": [],
