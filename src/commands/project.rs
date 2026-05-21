@@ -1,0 +1,46 @@
+use anyhow::Result;
+use nexa_core::domain::models::Project;
+
+use crate::client::NexaClient;
+use crate::output;
+
+pub async fn list_projects(client: &NexaClient) -> Result<()> {
+    let projects: Vec<Project> = client.get("/api/v1/projects").await?;
+
+    if output::is_json_mode() {
+        let json_projects: Vec<serde_json::Value> = projects
+            .iter()
+            .map(|p| serde_json::to_value(p).unwrap())
+            .collect();
+        output::print_json(&json_projects);
+        return Ok(());
+    }
+
+    let rows: Vec<Vec<String>> = projects
+        .iter()
+        .map(|p| {
+            vec![
+                p.name.clone(),
+                output::format_age(&p.created_at),
+            ]
+        })
+        .collect();
+
+    output::print_table(&["Name", "Age"], &rows);
+
+    Ok(())
+}
+
+pub async fn create_project(client: &NexaClient, name: &str) -> Result<()> {
+    let body = serde_json::json!({ "name": name }).to_string();
+    let project: Project = client.post_json("/api/v1/projects", &body).await?;
+
+    if output::is_json_mode() {
+        output::print_json(&serde_json::json!({"status": "ok", "project": project}));
+        return Ok(());
+    }
+
+    output::print_success(&format!("Project '{name}' created"));
+
+    Ok(())
+}

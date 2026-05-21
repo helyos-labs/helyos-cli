@@ -15,6 +15,10 @@ struct Cli {
     #[arg(long, default_value = "http://localhost:6443", global = true)]
     server: String,
 
+    /// Output results as JSON
+    #[arg(long, global = true)]
+    json: bool,
+
     #[command(subcommand)]
     command: Commands,
 }
@@ -110,6 +114,7 @@ enum ProjectCommands {
 #[tokio::main]
 async fn main() -> anyhow::Result<()> {
     let cli = Cli::parse();
+    output::set_json_mode(cli.json);
     let client = client::NexaClient::new(&cli.server);
 
     match cli.command {
