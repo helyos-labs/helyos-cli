@@ -1,6 +1,6 @@
 use anyhow::Result;
 use nexa_core::config::parse_deployment_file;
-use nexa_core::models::{Deployment, Pod, Project};
+use nexa_core::domain::models::{Deployment, Pod, Project};
 use reqwest::Response;
 use std::path::Path;
 
