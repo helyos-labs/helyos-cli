@@ -14,6 +14,7 @@ pub async fn deploy(client: &NexaClient, file: &str) -> Result<()> {
         anyhow::bail!("file not found: {file}");
     }
 
+    let yaml = std::fs::read_to_string(path)?;
     let spec = parse_deployment_file(path)?;
     let project = spec.project.clone();
     let name = spec.deployment.name.clone();
@@ -27,7 +28,6 @@ pub async fn deploy(client: &NexaClient, file: &str) -> Result<()> {
         None
     };
 
-    let yaml = std::fs::read_to_string(path)?;
     let deployment: Deployment = client.post_yaml("/api/v1/deploy", &yaml).await?;
 
     if let Some(s) = &spinner {
@@ -44,8 +44,6 @@ pub async fn deploy(client: &NexaClient, file: &str) -> Result<()> {
         return Ok(());
     }
 
-    println!("Deploying {name} to project '{project}'...");
-
     let timeout = Duration::from_secs(60);
     let start = Instant::now();
     let mut seen_running: std::collections::HashSet<String> = std::collections::HashSet::new();
@@ -55,7 +53,7 @@ pub async fn deploy(client: &NexaClient, file: &str) -> Result<()> {
             output::print_warning(&format!(
                 "Timed out waiting for all pods (60s). Check status with: nexa pods -p {project}"
             ));
-            break;
+            anyhow::bail!("timed out waiting for deployment '{name}'");
         }
 
         let pods = client.get_pods_for_deployment(&project, &name).await?;
@@ -72,26 +70,28 @@ pub async fn deploy(client: &NexaClient, file: &str) -> Result<()> {
             .iter()
             .filter(|p| p.status == PodStatus::Running)
             .count() as u32;
-        let failed = pods.iter().any(|p| p.status == PodStatus::Failed);
+        let failed = pods.iter().any(|p| is_terminal_failure(&p.status));
 
         if running >= replicas {
             output::print_success(&format!(
                 "Deployment '{name}' is running ({running}/{replicas} replicas)"
             ));
-            break;
+            return Ok(());
         }
 
         if failed {
             output::print_error(&format!(
                 "Deployment '{name}' has failed pods. Check: nexa pods -p {project}"
             ));
-            break;
+            anyhow::bail!("deployment '{name}' has failed pods");
         }
 
         sleep(Duration::from_millis(500)).await;
     }
+}
 
-    Ok(())
+fn is_terminal_failure(status: &PodStatus) -> bool {
+    matches!(status, PodStatus::Failed | PodStatus::CrashLoopBackoff)
 }
 
 async fn poll_until_ready(
@@ -113,7 +113,7 @@ async fn poll_until_ready(
             .iter()
             .filter(|p| p.status == PodStatus::Running)
             .count() as u32;
-        if running >= replicas || pods.iter().any(|p| p.status == PodStatus::Failed) {
+        if running >= replicas || pods.iter().any(|p| is_terminal_failure(&p.status)) {
             return Ok(pods);
         }
 

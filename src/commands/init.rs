@@ -69,11 +69,10 @@ pub fn init(name: Option<&str>, image: Option<&str>) -> Result<()> {
 
     let dir = Path::new(&project);
     if dir.join("app.yaml").exists() {
-        output::print_error_with_hint(
-            &format!("{}/app.yaml already exists", project),
-            "Use a different name or remove the existing file",
+        anyhow::bail!(
+            "{}/app.yaml already exists — use a different name or remove the existing file",
+            project
         );
-        anyhow::bail!("{}/app.yaml already exists", project);
     }
 
     fs::create_dir_all(dir)?;
