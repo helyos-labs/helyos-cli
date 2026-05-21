@@ -92,4 +92,17 @@ impl NexaClient {
         }
         Ok(resp)
     }
+
+    pub async fn get_pods_for_deployment(
+        &self,
+        project: &str,
+        deployment_name: &str,
+    ) -> Result<Vec<nexa_core::domain::models::Pod>> {
+        let pods: Vec<nexa_core::domain::models::Pod> =
+            self.get(&format!("/api/v1/pods?project={project}")).await?;
+        Ok(pods
+            .into_iter()
+            .filter(|p| p.deployment_name == deployment_name)
+            .collect())
+    }
 }

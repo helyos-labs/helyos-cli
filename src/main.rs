@@ -25,11 +25,23 @@ struct Cli {
 
 #[derive(Subcommand)]
 enum Commands {
+    /// Initialize a new NexaNet project
+    Init {
+        /// Project name (interactive if omitted)
+        name: Option<String>,
+        /// Container image to use
+        #[arg(long)]
+        image: Option<String>,
+    },
+
     /// Deploy a service from a YAML spec
     Deploy {
         /// Path to the deployment YAML file
         file: String,
     },
+
+    /// Show cluster status overview
+    Status,
 
     /// List all pods
     Pods {
@@ -118,7 +130,11 @@ async fn main() -> anyhow::Result<()> {
     let client = client::NexaClient::new(&cli.server);
 
     match cli.command {
+        Commands::Init { name, image } => {
+            commands::init(name.as_deref(), image.as_deref())
+        }
         Commands::Deploy { file } => commands::deploy(&client, &file).await,
+        Commands::Status => commands::status(&client).await,
         Commands::Pods { project } => commands::pods(&client, project.as_deref()).await,
         Commands::Deployments { project } => {
             commands::deployments(&client, project.as_deref()).await

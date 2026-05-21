@@ -1,10 +1,12 @@
 use anyhow::Result;
 use nexa_core::config::parse_deployment_file;
-use nexa_core::domain::models::Deployment;
+use nexa_core::domain::models::{Deployment, PodStatus};
 use std::path::Path;
+use std::time::{Duration, Instant};
+use tokio::time::sleep;
 
 use crate::client::NexaClient;
-use crate::output;
+use crate::output::{self, Spinner};
 
 pub async fn deploy(client: &NexaClient, file: &str) -> Result<()> {
     let path = Path::new(file);
@@ -18,9 +20,8 @@ pub async fn deploy(client: &NexaClient, file: &str) -> Result<()> {
     let replicas = spec.replicas;
 
     let spinner = if !output::is_json_mode() {
-        Some(output::Spinner::new(&format!(
-            "Deploying {name} ({replicas} replica{}) to project '{project}'...",
-            if replicas > 1 { "s" } else { "" }
+        Some(Spinner::new(&format!(
+            "Deploying {name} to project '{project}'..."
         )))
     } else {
         None
@@ -29,18 +30,93 @@ pub async fn deploy(client: &NexaClient, file: &str) -> Result<()> {
     let yaml = std::fs::read_to_string(path)?;
     let deployment: Deployment = client.post_yaml("/api/v1/deploy", &yaml).await?;
 
+    if let Some(s) = &spinner {
+        s.finish_clear();
+    }
+
     if output::is_json_mode() {
-        output::print_json(&serde_json::json!({"status": "ok", "deployment": deployment}));
+        let pods = poll_until_ready(client, &project, &name, replicas).await?;
+        output::print_json(&serde_json::json!({
+            "status": "ok",
+            "deployment": deployment,
+            "pods": pods,
+        }));
         return Ok(());
     }
 
-    if let Some(s) = spinner {
-        s.finish_success(&format!(
-            "Deployment '{name}' is {} (id: {})",
-            deployment.status,
-            &deployment.id.to_string()[..8]
-        ));
+    println!("Deploying {name} to project '{project}'...");
+
+    let timeout = Duration::from_secs(60);
+    let start = Instant::now();
+    let mut seen_running: std::collections::HashSet<String> = std::collections::HashSet::new();
+
+    loop {
+        if start.elapsed() > timeout {
+            output::print_warning(&format!(
+                "Timed out waiting for all pods (60s). Check status with: nexa pods -p {project}"
+            ));
+            break;
+        }
+
+        let pods = client.get_pods_for_deployment(&project, &name).await?;
+
+        for pod in &pods {
+            let pod_name = pod.container_name();
+            if pod.status == PodStatus::Running && !seen_running.contains(&pod_name) {
+                output::print_success(&format!("Pod {} running", pod_name));
+                seen_running.insert(pod_name);
+            }
+        }
+
+        let running = pods
+            .iter()
+            .filter(|p| p.status == PodStatus::Running)
+            .count() as u32;
+        let failed = pods.iter().any(|p| p.status == PodStatus::Failed);
+
+        if running >= replicas {
+            output::print_success(&format!(
+                "Deployment '{name}' is running ({running}/{replicas} replicas)"
+            ));
+            break;
+        }
+
+        if failed {
+            output::print_error(&format!(
+                "Deployment '{name}' has failed pods. Check: nexa pods -p {project}"
+            ));
+            break;
+        }
+
+        sleep(Duration::from_millis(500)).await;
     }
 
     Ok(())
+}
+
+async fn poll_until_ready(
+    client: &NexaClient,
+    project: &str,
+    name: &str,
+    replicas: u32,
+) -> Result<Vec<nexa_core::domain::models::Pod>> {
+    let timeout = Duration::from_secs(60);
+    let start = Instant::now();
+
+    loop {
+        if start.elapsed() > timeout {
+            return client.get_pods_for_deployment(project, name).await;
+        }
+
+        let pods = client.get_pods_for_deployment(project, name).await?;
+        let running = pods
+            .iter()
+            .filter(|p| p.status == PodStatus::Running)
+            .count() as u32;
+        if running >= replicas || pods.iter().any(|p| p.status == PodStatus::Failed) {
+            return Ok(pods);
+        }
+
+        sleep(Duration::from_millis(500)).await;
+    }
 }
