@@ -109,6 +109,15 @@ enum Commands {
         #[command(subcommand)]
         command: ProjectCommands,
     },
+
+    /// Manage secrets
+    Secret {
+        #[command(subcommand)]
+        command: SecretCommands,
+    },
+
+    /// List cluster nodes (Phase 2)
+    Nodes,
 }
 
 #[derive(Subcommand)]
@@ -121,6 +130,54 @@ enum ProjectCommands {
         /// Project name
         name: String,
     },
+
+    /// Suspend a project (stops all deployments)
+    Suspend {
+        /// Project name
+        name: String,
+    },
+
+    /// Resume a suspended project
+    Resume {
+        /// Project name
+        name: String,
+    },
+
+    /// Delete a project and all its resources
+    Delete {
+        /// Project name
+        name: String,
+    },
+}
+
+#[derive(Subcommand)]
+enum SecretCommands {
+    /// Set a secret value
+    Set {
+        /// Secret name
+        name: String,
+        /// Secret value
+        value: String,
+        /// Project name
+        #[arg(short, long)]
+        project: String,
+    },
+
+    /// List all secrets in a project
+    List {
+        /// Project name
+        #[arg(short, long)]
+        project: String,
+    },
+
+    /// Remove a secret
+    Rm {
+        /// Secret name
+        name: String,
+        /// Project name
+        #[arg(short, long)]
+        project: String,
+    },
 }
 
 #[tokio::main]
@@ -129,7 +186,7 @@ async fn main() -> anyhow::Result<()> {
     output::set_json_mode(cli.json);
     let client = client::NexaClient::new(&cli.server);
 
-    match cli.command {
+    let result = match cli.command {
         Commands::Init { name, image } => {
             commands::init(name.as_deref(), image.as_deref())
         }
@@ -158,6 +215,34 @@ async fn main() -> anyhow::Result<()> {
         Commands::Project { command } => match command {
             ProjectCommands::List => commands::list_projects(&client).await,
             ProjectCommands::Create { name } => commands::create_project(&client, &name).await,
+            ProjectCommands::Suspend { name } => commands::suspend_project(&client, &name).await,
+            ProjectCommands::Resume { name } => commands::resume_project(&client, &name).await,
+            ProjectCommands::Delete { name } => commands::delete_project(&client, &name).await,
         },
+        Commands::Secret { command } => match command {
+            SecretCommands::Set { name, value, project } => {
+                commands::secret::set(&client, &project, &name, &value).await
+            }
+            SecretCommands::List { project } => {
+                commands::secret::list(&client, &project).await
+            }
+            SecretCommands::Rm { name, project } => {
+                commands::secret::remove(&client, &project, &name).await
+            }
+        },
+        Commands::Nodes => commands::nodes().await,
+    };
+
+    if let Err(e) = &result {
+        let msg = e.to_string();
+        if msg.contains("Connection refused") || msg.contains("connect") {
+            output::print_error_with_hint(
+                "Cannot connect to nexad",
+                &format!("Is nexad running? Start it with: nexad --host {}", cli.server),
+            );
+            std::process::exit(1);
+        }
     }
+
+    result
 }

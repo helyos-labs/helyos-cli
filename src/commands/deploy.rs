@@ -15,7 +15,13 @@ pub async fn deploy(client: &NexaClient, file: &str) -> Result<()> {
     }
 
     let yaml = std::fs::read_to_string(path)?;
-    let spec = parse_deployment_file(path)?;
+    let spec = parse_deployment_file(path).map_err(|e| {
+        output::print_error_with_hint(
+            &format!("Invalid deployment spec: {e}"),
+            "Run 'nexa init' to generate a valid template",
+        );
+        e
+    })?;
     let project = spec.project.clone();
     let name = spec.deployment.name.clone();
     let replicas = spec.replicas;

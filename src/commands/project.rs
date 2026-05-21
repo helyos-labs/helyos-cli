@@ -40,3 +40,54 @@ pub async fn create_project(client: &NexaClient, name: &str) -> Result<()> {
 
     Ok(())
 }
+
+pub async fn suspend(client: &NexaClient, name: &str) -> Result<()> {
+    let path = format!("/api/v1/projects/{name}/suspend");
+    client.post_empty(&path).await?;
+
+    if output::is_json_mode() {
+        output::print_json(&serde_json::json!({
+            "status": "ok",
+            "project": name,
+            "action": "suspended",
+        }));
+        return Ok(());
+    }
+
+    output::print_success(&format!("Project '{name}' suspended"));
+    Ok(())
+}
+
+pub async fn resume(client: &NexaClient, name: &str) -> Result<()> {
+    let path = format!("/api/v1/projects/{name}/resume");
+    client.post_empty(&path).await?;
+
+    if output::is_json_mode() {
+        output::print_json(&serde_json::json!({
+            "status": "ok",
+            "project": name,
+            "action": "resumed",
+        }));
+        return Ok(());
+    }
+
+    output::print_success(&format!("Project '{name}' resumed"));
+    Ok(())
+}
+
+pub async fn delete_project(client: &NexaClient, name: &str) -> Result<()> {
+    let path = format!("/api/v1/projects/{name}");
+    client.delete(&path).await?;
+
+    if output::is_json_mode() {
+        output::print_json(&serde_json::json!({
+            "status": "ok",
+            "project": name,
+            "action": "deleted",
+        }));
+        return Ok(());
+    }
+
+    output::print_success(&format!("Project '{name}' deleted"));
+    Ok(())
+}
