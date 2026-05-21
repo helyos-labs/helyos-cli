@@ -42,10 +42,6 @@ pub fn print_table(headers: &[&str], rows: &[Vec<String>]) {
         .join("  ");
     println!("{header_line}");
 
-    let status_style_running = Style::new().green();
-    let status_style_stopped = Style::new().red();
-    let status_style_pending = Style::new().yellow();
-
     for row in rows {
         let line: String = row
             .iter()
@@ -53,16 +49,16 @@ pub fn print_table(headers: &[&str], rows: &[Vec<String>]) {
             .map(|(i, cell)| {
                 let w = widths.get(i).copied().unwrap_or(cell.len());
                 let formatted = format!("{:<width$}", cell, width = w);
-                // Color the Status column
                 if headers.get(i).is_some_and(|h| h.eq_ignore_ascii_case("status")) {
-                    let lower = cell.to_lowercase();
-                    if lower.contains("running") || lower.contains("active") {
-                        return format!("{}", status_style_running.apply_to(formatted));
-                    } else if lower.contains("stopped") || lower.contains("failed") || lower.contains("error") {
-                        return format!("{}", status_style_stopped.apply_to(formatted));
-                    } else if lower.contains("pending") || lower.contains("scaling") {
-                        return format!("{}", status_style_pending.apply_to(formatted));
-                    }
+                    let s = match cell.as_str() {
+                        "Running" => Style::new().green(),
+                        "Degraded" | "Restarting" => Style::new().yellow(),
+                        "Failed" => Style::new().red(),
+                        "Stopped" | "Stopping" => Style::new().dim(),
+                        "Pending" | "Creating" => Style::new().cyan(),
+                        _ => Style::new(),
+                    };
+                    return format!("{}", s.apply_to(formatted));
                 }
                 formatted
             })

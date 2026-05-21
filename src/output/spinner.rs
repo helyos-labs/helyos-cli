@@ -19,7 +19,6 @@ impl Spinner {
         Self { bar }
     }
 
-    #[allow(dead_code)]
     pub fn set_message(&self, message: &str) {
         self.bar.set_message(message.to_string());
     }
@@ -30,7 +29,6 @@ impl Spinner {
             .finish_with_message(format!("{} {message}", style.apply_to("✓")));
     }
 
-    #[allow(dead_code)]
     pub fn finish_error(&self, message: &str) {
         let style = Style::new().red();
         self.bar

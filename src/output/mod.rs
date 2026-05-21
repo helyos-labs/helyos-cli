@@ -1,5 +1,7 @@
 mod age;
+#[allow(dead_code)]
 mod spinner;
+#[allow(dead_code)]
 mod style;
 mod table;
 
