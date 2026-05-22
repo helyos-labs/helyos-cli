@@ -104,6 +104,21 @@ impl NexaClient {
         Ok(resp.json().await?)
     }
 
+    pub async fn post_empty_json<T: DeserializeOwned>(&self, path: &str) -> Result<T> {
+        let url = format!("{}{path}", self.base_url);
+        let resp = self.http.post(&url).send().await?;
+        let status = resp.status();
+        if !status.is_success() {
+            let body = resp.text().await.unwrap_or_default();
+            let msg = format_api_error(status, &body);
+            if let Some(hint) = error_hint(status) {
+                anyhow::bail!("{msg}\n  hint: {hint}");
+            }
+            anyhow::bail!("{msg}");
+        }
+        Ok(resp.json().await?)
+    }
+
     pub async fn post_empty(&self, path: &str) -> Result<()> {
         let url = format!("{}{path}", self.base_url);
         let resp = self.http.post(&url).send().await?;

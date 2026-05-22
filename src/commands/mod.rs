@@ -1,8 +1,10 @@
+pub mod cluster;
 pub mod deploy;
 pub mod deployments;
 pub mod init;
 pub mod lifecycle;
 pub mod logs;
+pub mod node;
 pub mod nodes;
 pub mod pods;
 pub mod project;

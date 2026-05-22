@@ -116,8 +116,20 @@ enum Commands {
         command: SecretCommands,
     },
 
-    /// List cluster nodes (Phase 2)
+    /// List cluster nodes
     Nodes,
+
+    /// Manage a specific node
+    Node {
+        #[command(subcommand)]
+        command: NodeCommands,
+    },
+
+    /// Manage the cluster
+    Cluster {
+        #[command(subcommand)]
+        command: ClusterCommands,
+    },
 }
 
 #[derive(Subcommand)]
@@ -180,6 +192,39 @@ enum SecretCommands {
     },
 }
 
+#[derive(Subcommand)]
+enum ClusterCommands {
+    /// Initialize the cluster and generate a join token
+    Init,
+    /// Manage join tokens
+    Token {
+        #[command(subcommand)]
+        command: TokenCommands,
+    },
+}
+
+#[derive(Subcommand)]
+enum TokenCommands {
+    /// Show the current join token
+    Show,
+    /// Rotate the join token
+    Rotate,
+}
+
+#[derive(Subcommand)]
+enum NodeCommands {
+    /// Drain a node (stop scheduling new pods)
+    Drain {
+        /// Node name
+        name: String,
+    },
+    /// Remove a node from the cluster
+    Rm {
+        /// Node name
+        name: String,
+    },
+}
+
 #[tokio::main]
 async fn main() -> anyhow::Result<()> {
     let cli = Cli::parse();
@@ -231,6 +276,17 @@ async fn main() -> anyhow::Result<()> {
             }
         },
         Commands::Nodes => commands::nodes(&client).await,
+        Commands::Cluster { command } => match command {
+            ClusterCommands::Init => commands::cluster::init(&client).await,
+            ClusterCommands::Token { command } => match command {
+                TokenCommands::Show => commands::cluster::token_show(&client).await,
+                TokenCommands::Rotate => commands::cluster::token_rotate(&client).await,
+            },
+        },
+        Commands::Node { command } => match command {
+            NodeCommands::Drain { name } => commands::node::drain(&client, &name).await,
+            NodeCommands::Rm { name } => commands::node::remove(&client, &name).await,
+        },
     };
 
     if let Err(e) = result {
