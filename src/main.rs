@@ -428,3 +428,112 @@ async fn main() -> anyhow::Result<()> {
 
     Ok(())
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use clap::Parser;
+
+    #[test]
+    fn parse_deploy_command() {
+        let cli = Cli::try_parse_from(["nexa", "deploy", "app.yaml"]).unwrap();
+        match cli.command {
+            Commands::Deploy { file } => assert_eq!(file, "app.yaml"),
+            _ => panic!("expected Deploy command"),
+        }
+    }
+
+    #[test]
+    fn parse_scale_command() {
+        let cli = Cli::try_parse_from(["nexa", "scale", "api", "5", "-p", "myapp"]).unwrap();
+        match cli.command {
+            Commands::Scale {
+                name,
+                replicas,
+                project,
+            } => {
+                assert_eq!(name, "api");
+                assert_eq!(replicas, 5);
+                assert_eq!(project, Some("myapp".to_string()));
+            }
+            _ => panic!("expected Scale command"),
+        }
+    }
+
+    #[test]
+    fn parse_pods_with_project() {
+        let cli = Cli::try_parse_from(["nexa", "pods", "--project", "web"]).unwrap();
+        match cli.command {
+            Commands::Pods { project } => assert_eq!(project, Some("web".to_string())),
+            _ => panic!("expected Pods command"),
+        }
+    }
+
+    #[test]
+    fn parse_json_flag() {
+        let cli = Cli::try_parse_from(["nexa", "--json", "status"]).unwrap();
+        assert!(cli.json);
+    }
+
+    #[test]
+    fn parse_server_flag() {
+        let cli =
+            Cli::try_parse_from(["nexa", "--server", "http://10.0.1.1:6443", "status"]).unwrap();
+        assert_eq!(cli.server, "http://10.0.1.1:6443");
+    }
+
+    #[test]
+    fn parse_secret_set() {
+        let cli =
+            Cli::try_parse_from(["nexa", "secret", "set", "DB_PASS", "s3cret", "-p", "myapp"])
+                .unwrap();
+        match cli.command {
+            Commands::Secret { command } => match command {
+                SecretCommands::Set {
+                    name,
+                    value,
+                    project,
+                } => {
+                    assert_eq!(name, "DB_PASS");
+                    assert_eq!(value, "s3cret");
+                    assert_eq!(project, "myapp");
+                }
+                _ => panic!("expected Secret Set subcommand"),
+            },
+            _ => panic!("expected Secret command"),
+        }
+    }
+
+    #[test]
+    fn parse_route_add() {
+        let cli = Cli::try_parse_from([
+            "nexa",
+            "route",
+            "add",
+            "api.example.com",
+            "-p",
+            "web",
+            "--deployment",
+            "api",
+            "--https",
+        ])
+        .unwrap();
+        match cli.command {
+            Commands::Route { command } => match command {
+                RouteCommands::Add {
+                    domain,
+                    project,
+                    deployment,
+                    https,
+                } => {
+                    assert_eq!(domain, "api.example.com");
+                    assert_eq!(project, "web");
+                    assert_eq!(deployment, "api");
+                    assert!(https);
+                }
+                _ => panic!("expected Route Add subcommand"),
+            },
+            _ => panic!("expected Route command"),
+        }
+    }
+}
