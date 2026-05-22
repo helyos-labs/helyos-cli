@@ -149,6 +149,12 @@ enum Commands {
         #[command(subcommand)]
         command: CertCommands,
     },
+
+    /// Setup system components
+    Setup {
+        #[command(subcommand)]
+        component: SetupComponent,
+    },
 }
 
 #[derive(Subcommand)]
@@ -300,6 +306,20 @@ enum CertCommands {
     },
 }
 
+#[derive(Subcommand)]
+enum SetupComponent {
+    /// Download and install standard CNI plugins
+    Cni {
+        /// Directory to install CNI plugin binaries
+        #[arg(long, default_value = "/var/lib/nexa/cni/bin")]
+        bin_dir: String,
+
+        /// CNI plugins version to download
+        #[arg(long, default_value = "1.4.1")]
+        version: String,
+    },
+}
+
 #[tokio::main]
 async fn main() -> anyhow::Result<()> {
     let cli = Cli::parse();
@@ -383,6 +403,11 @@ async fn main() -> anyhow::Result<()> {
         Commands::Cert { command } => match command {
             CertCommands::Import { domain, cert, key } => {
                 commands::route::import_cert(&client, &domain, &cert, &key).await
+            }
+        },
+        Commands::Setup { component } => match component {
+            SetupComponent::Cni { bin_dir, version } => {
+                commands::setup::cni(&bin_dir, &version).await
             }
         },
     };

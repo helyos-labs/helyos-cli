@@ -11,6 +11,7 @@ pub mod project;
 pub mod route;
 pub mod scale;
 pub mod secret;
+pub mod setup;
 pub mod status;
 
 pub use deploy::deploy;
