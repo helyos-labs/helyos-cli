@@ -21,6 +21,9 @@ pub use lifecycle::{remove, stop};
 pub use logs::logs;
 pub use nodes::nodes;
 pub use pods::pods;
-pub use project::{create_project, delete_project, list_projects, resume as resume_project, suspend as suspend_project};
+pub use project::{
+    create_project, delete_project, list_projects, resume as resume_project,
+    suspend as suspend_project,
+};
 pub use scale::scale;
 pub use status::status;

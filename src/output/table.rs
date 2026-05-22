@@ -37,7 +37,12 @@ pub fn print_table(headers: &[&str], rows: &[Vec<String>]) {
     let header_line: String = headers
         .iter()
         .enumerate()
-        .map(|(i, h)| format!("{}", bold.apply_to(format!("{:<width$}", h.to_uppercase(), width = widths[i]))))
+        .map(|(i, h)| {
+            format!(
+                "{}",
+                bold.apply_to(format!("{:<width$}", h.to_uppercase(), width = widths[i]))
+            )
+        })
         .collect::<Vec<_>>()
         .join("  ");
     println!("{header_line}");
@@ -49,7 +54,10 @@ pub fn print_table(headers: &[&str], rows: &[Vec<String>]) {
             .map(|(i, cell)| {
                 let w = widths.get(i).copied().unwrap_or(cell.len());
                 let formatted = format!("{:<width$}", cell, width = w);
-                if headers.get(i).is_some_and(|h| h.eq_ignore_ascii_case("status")) {
+                if headers
+                    .get(i)
+                    .is_some_and(|h| h.eq_ignore_ascii_case("status"))
+                {
                     let s = match cell.to_lowercase().as_str() {
                         "running" => Style::new().green(),
                         "degraded" | "restarting" => Style::new().yellow(),

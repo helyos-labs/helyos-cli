@@ -327,9 +327,7 @@ async fn main() -> anyhow::Result<()> {
     let client = client::NexaClient::new(&cli.server);
 
     let result = match cli.command {
-        Commands::Init { name, image } => {
-            commands::init(name.as_deref(), image.as_deref())
-        }
+        Commands::Init { name, image } => commands::init(name.as_deref(), image.as_deref()),
         Commands::Deploy { file } => commands::deploy(&client, &file).await,
         Commands::Status => commands::status(&client).await,
         Commands::Pods { project } => commands::pods(&client, project.as_deref()).await,
@@ -360,12 +358,12 @@ async fn main() -> anyhow::Result<()> {
             ProjectCommands::Delete { name } => commands::delete_project(&client, &name).await,
         },
         Commands::Secret { command } => match command {
-            SecretCommands::Set { name, value, project } => {
-                commands::secret::set(&client, &project, &name, &value).await
-            }
-            SecretCommands::List { project } => {
-                commands::secret::list(&client, &project).await
-            }
+            SecretCommands::Set {
+                name,
+                value,
+                project,
+            } => commands::secret::set(&client, &project, &name, &value).await,
+            SecretCommands::List { project } => commands::secret::list(&client, &project).await,
             SecretCommands::Rm { name, project } => {
                 commands::secret::remove(&client, &project, &name).await
             }
@@ -417,7 +415,10 @@ async fn main() -> anyhow::Result<()> {
         if msg.contains("Connection refused") || msg.contains("connect") {
             output::print_error_with_hint(
                 "Cannot connect to nexad",
-                &format!("Is nexad running? Start it with: nexad --host {}", cli.server),
+                &format!(
+                    "Is nexad running? Start it with: nexad --host {}",
+                    cli.server
+                ),
             );
         } else {
             output::print_error(&msg);

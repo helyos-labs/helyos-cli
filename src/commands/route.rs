@@ -29,7 +29,10 @@ pub async fn list(client: &NexaClient, project: Option<&str>) -> Result<()> {
         })
         .collect();
 
-    output::print_table(&["DOMAIN", "PROJECT", "DEPLOYMENT", "TLS", "CREATED"], &rows);
+    output::print_table(
+        &["DOMAIN", "PROJECT", "DEPLOYMENT", "TLS", "CREATED"],
+        &rows,
+    );
     Ok(())
 }
 
@@ -50,7 +53,9 @@ pub async fn add(
     .to_string();
 
     let _: serde_json::Value = client.post_json("/api/v1/routes", &body).await?;
-    output::print_success(&format!("Route '{domain}' -> {project}/{deployment} ({tls_mode})"));
+    output::print_success(&format!(
+        "Route '{domain}' -> {project}/{deployment} ({tls_mode})"
+    ));
     Ok(())
 }
 

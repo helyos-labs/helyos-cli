@@ -48,7 +48,7 @@ pub fn init(name: Option<&str>, image: Option<&str>) -> Result<()> {
         let img = image.unwrap_or("nginx:alpine");
         (name.to_string(), name.to_string(), img.to_string())
     } else {
-        use dialoguer::{theme::ColorfulTheme, Input};
+        use dialoguer::{Input, theme::ColorfulTheme};
 
         let project: String = Input::with_theme(&ColorfulTheme::default())
             .with_prompt("Project name")
@@ -92,7 +92,10 @@ pub fn init(name: Option<&str>, image: Option<&str>) -> Result<()> {
     output::print_success(&format!("Created {}/app.yaml", project));
     println!();
     println!("Next steps:");
-    println!("  1. Edit {}/app.yaml to customize your deployment", project);
+    println!(
+        "  1. Edit {}/app.yaml to customize your deployment",
+        project
+    );
     println!("  2. Deploy with: nexa deploy {}/app.yaml", project);
     println!();
 

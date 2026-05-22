@@ -34,7 +34,9 @@ pub async fn nodes(client: &NexaClient) -> Result<()> {
         .collect();
 
     output::print_table(
-        &["NAME", "ROLE", "STATUS", "ADDRESS", "CPUS", "MEMORY", "PODS", "AGE"],
+        &[
+            "NAME", "ROLE", "STATUS", "ADDRESS", "CPUS", "MEMORY", "PODS", "AGE",
+        ],
         &rows,
     );
 

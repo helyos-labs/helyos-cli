@@ -8,7 +8,9 @@ mod table;
 pub use age::format_age;
 pub use spinner::Spinner;
 #[allow(unused_imports)]
-pub use style::{print_error, print_error_with_hint, print_header, print_kv, print_success, print_warning};
+pub use style::{
+    print_error, print_error_with_hint, print_header, print_kv, print_success, print_warning,
+};
 pub use table::print_table;
 
 use std::sync::atomic::{AtomicBool, Ordering};

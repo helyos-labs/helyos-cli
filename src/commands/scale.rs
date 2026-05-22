@@ -15,7 +15,10 @@ pub async fn scale(
     let body = serde_json::json!({ "replicas": replicas }).to_string();
 
     let spinner = if !output::is_json_mode() {
-        Some(output::Spinner::new(&format!("Scaling '{name}' to {replicas} replica{}...", if replicas > 1 { "s" } else { "" })))
+        Some(output::Spinner::new(&format!(
+            "Scaling '{name}' to {replicas} replica{}...",
+            if replicas > 1 { "s" } else { "" }
+        )))
     } else {
         None
     };
@@ -31,7 +34,11 @@ pub async fn scale(
         s.finish_success(&format!(
             "Scaled '{name}' to {} replica{}",
             deployment.spec.replicas,
-            if deployment.spec.replicas > 1 { "s" } else { "" }
+            if deployment.spec.replicas > 1 {
+                "s"
+            } else {
+                ""
+            }
         ));
     }
 

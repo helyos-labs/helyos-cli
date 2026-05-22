@@ -10,7 +10,9 @@ pub async fn stop(client: &NexaClient, project: Option<&str>, name: &str) -> Res
     client.post_empty(&path).await?;
 
     if output::is_json_mode() {
-        output::print_json(&serde_json::json!({"status": "ok", "action": "stop", "project": project, "deployment": name}));
+        output::print_json(
+            &serde_json::json!({"status": "ok", "action": "stop", "project": project, "deployment": name}),
+        );
         return Ok(());
     }
 
@@ -26,7 +28,9 @@ pub async fn remove(client: &NexaClient, project: Option<&str>, name: &str) -> R
     client.delete(&path).await?;
 
     if output::is_json_mode() {
-        output::print_json(&serde_json::json!({"status": "ok", "action": "remove", "project": project, "deployment": name}));
+        output::print_json(
+            &serde_json::json!({"status": "ok", "action": "remove", "project": project, "deployment": name}),
+        );
         return Ok(());
     }
 

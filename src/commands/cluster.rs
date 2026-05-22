@@ -34,7 +34,9 @@ pub async fn token_show(client: &NexaClient) -> Result<()> {
 }
 
 pub async fn token_rotate(client: &NexaClient) -> Result<()> {
-    let resp: serde_json::Value = client.post_empty_json("/api/v1/cluster/token/rotate").await?;
+    let resp: serde_json::Value = client
+        .post_empty_json("/api/v1/cluster/token/rotate")
+        .await?;
     let token = resp["token"].as_str().unwrap_or("unknown");
 
     if output::is_json_mode() {
@@ -56,7 +58,10 @@ pub async fn get_scheduler_config(client: &NexaClient) -> Result<()> {
     }
 
     println!("Scheduler configuration:");
-    println!("  Strategy: {}", config["strategy"].as_str().unwrap_or("unknown"));
+    println!(
+        "  Strategy: {}",
+        config["strategy"].as_str().unwrap_or("unknown")
+    );
     println!("  Weights:");
     if let Some(weights) = config.get("weights") {
         println!("    cpu:     {}", weights["cpu"]);
@@ -80,6 +85,9 @@ pub async fn set_cluster_config(client: &NexaClient, key: &str, value: &str) -> 
     };
 
     let config: serde_json::Value = client.post_json("/api/v1/cluster/scheduler", &body).await?;
-    output::print_success(&format!("Scheduler config updated: {}", config["strategy"].as_str().unwrap_or("unknown")));
+    output::print_success(&format!(
+        "Scheduler config updated: {}",
+        config["strategy"].as_str().unwrap_or("unknown")
+    ));
     Ok(())
 }

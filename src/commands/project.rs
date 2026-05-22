@@ -14,12 +14,7 @@ pub async fn list_projects(client: &NexaClient) -> Result<()> {
 
     let rows: Vec<Vec<String>> = projects
         .iter()
-        .map(|p| {
-            vec![
-                p.name.clone(),
-                output::format_age(&p.created_at),
-            ]
-        })
+        .map(|p| vec![p.name.clone(), output::format_age(&p.created_at)])
         .collect();
 
     output::print_table(&["Name", "Age"], &rows);
