@@ -201,6 +201,24 @@ enum ClusterCommands {
         #[command(subcommand)]
         command: TokenCommands,
     },
+    /// View or update scheduler configuration
+    Config {
+        #[command(subcommand)]
+        command: ClusterConfigCommands,
+    },
+}
+
+#[derive(Subcommand)]
+enum ClusterConfigCommands {
+    /// Get current scheduler configuration
+    GetScheduler,
+    /// Set scheduler strategy or individual weight
+    Set {
+        /// Key: "scheduler" for strategy, or "scheduler.weights.<name>" for individual weight
+        key: String,
+        /// Value: strategy name (spread/binpack) or weight number
+        value: String,
+    },
 }
 
 #[derive(Subcommand)]
@@ -281,6 +299,14 @@ async fn main() -> anyhow::Result<()> {
             ClusterCommands::Token { command } => match command {
                 TokenCommands::Show => commands::cluster::token_show(&client).await,
                 TokenCommands::Rotate => commands::cluster::token_rotate(&client).await,
+            },
+            ClusterCommands::Config { command } => match command {
+                ClusterConfigCommands::GetScheduler => {
+                    commands::cluster::get_scheduler_config(&client).await
+                }
+                ClusterConfigCommands::Set { key, value } => {
+                    commands::cluster::set_cluster_config(&client, &key, &value).await
+                }
             },
         },
         Commands::Node { command } => match command {
