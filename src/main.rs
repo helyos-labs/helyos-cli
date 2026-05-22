@@ -130,6 +130,25 @@ enum Commands {
         #[command(subcommand)]
         command: ClusterCommands,
     },
+
+    /// List all routes
+    Routes {
+        /// Filter by project
+        #[arg(short, long)]
+        project: Option<String>,
+    },
+
+    /// Manage routes
+    Route {
+        #[command(subcommand)]
+        command: RouteCommands,
+    },
+
+    /// Manage TLS certificates
+    Cert {
+        #[command(subcommand)]
+        command: CertCommands,
+    },
 }
 
 #[derive(Subcommand)]
@@ -243,6 +262,44 @@ enum NodeCommands {
     },
 }
 
+#[derive(Subcommand)]
+enum RouteCommands {
+    /// Add a route for a domain
+    Add {
+        /// Domain name
+        domain: String,
+        /// Project name
+        #[arg(short, long)]
+        project: String,
+        /// Deployment name
+        #[arg(long)]
+        deployment: String,
+        /// Enable automatic HTTPS
+        #[arg(long)]
+        https: bool,
+    },
+    /// Remove a route
+    Rm {
+        /// Domain name
+        domain: String,
+    },
+}
+
+#[derive(Subcommand)]
+enum CertCommands {
+    /// Import a TLS certificate
+    Import {
+        /// Domain name
+        domain: String,
+        /// Path to certificate PEM file
+        #[arg(long)]
+        cert: String,
+        /// Path to private key PEM file
+        #[arg(long)]
+        key: String,
+    },
+}
+
 #[tokio::main]
 async fn main() -> anyhow::Result<()> {
     let cli = Cli::parse();
@@ -312,6 +369,21 @@ async fn main() -> anyhow::Result<()> {
         Commands::Node { command } => match command {
             NodeCommands::Drain { name } => commands::node::drain(&client, &name).await,
             NodeCommands::Rm { name } => commands::node::remove(&client, &name).await,
+        },
+        Commands::Routes { project } => commands::route::list(&client, project.as_deref()).await,
+        Commands::Route { command } => match command {
+            RouteCommands::Add {
+                domain,
+                project,
+                deployment,
+                https,
+            } => commands::route::add(&client, &domain, &project, &deployment, https).await,
+            RouteCommands::Rm { domain } => commands::route::remove(&client, &domain).await,
+        },
+        Commands::Cert { command } => match command {
+            CertCommands::Import { domain, cert, key } => {
+                commands::route::import_cert(&client, &domain, &cert, &key).await
+            }
         },
     };
 
