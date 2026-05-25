@@ -3,6 +3,7 @@ mod age;
 mod spinner;
 #[allow(dead_code)]
 mod style;
+pub mod deploy;
 mod panel;
 mod table;
 

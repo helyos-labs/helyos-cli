@@ -6,6 +6,7 @@ use std::time::{Duration, Instant};
 use tokio::time::sleep;
 
 use crate::client::NexaClient;
+use crate::output::deploy::{DeployStep, render_deploy_panel};
 use crate::output::{self, Spinner};
 
 pub async fn deploy(client: &NexaClient, file: &str) -> Result<()> {
@@ -50,14 +51,18 @@ pub async fn deploy(client: &NexaClient, file: &str) -> Result<()> {
         return Ok(());
     }
 
-    let timeout = Duration::from_secs(60);
     let start = Instant::now();
-    let mut seen_running: std::collections::HashSet<String> = std::collections::HashSet::new();
+    let timeout = Duration::from_secs(60);
+    let mut steps: Vec<DeployStep> = vec![DeployStep {
+        icon: format!("{}", output::color("green").apply_to("✓")),
+        label: "Image".to_string(),
+        detail: format!("{} pulled", deployment.spec.image),
+    }];
 
     loop {
         if start.elapsed() > timeout {
             output::print_warning(&format!(
-                "Timed out waiting for all pods (60s). Check status with: nexa pods -p {project}"
+                "Timed out waiting for all pods (60s). Check: nexa pods -p {project}"
             ));
             anyhow::bail!("timed out waiting for deployment '{name}'");
         }
@@ -66,9 +71,17 @@ pub async fn deploy(client: &NexaClient, file: &str) -> Result<()> {
 
         for pod in &pods {
             let pod_name = pod.container_name();
-            if pod.status == PodStatus::Running && !seen_running.contains(&pod_name) {
-                output::print_success(&format!("Pod {} running", pod_name));
-                seen_running.insert(pod_name);
+            let already = steps.iter().any(|s| s.detail.contains(&pod_name));
+            if pod.status == PodStatus::Running && !already {
+                steps.push(DeployStep {
+                    icon: format!("{}", output::color("green").apply_to("✓")),
+                    label: "Pod".to_string(),
+                    detail: format!(
+                        "{} {}",
+                        pod_name,
+                        output::color("green").apply_to("running")
+                    ),
+                });
             }
         }
 
@@ -79,16 +92,22 @@ pub async fn deploy(client: &NexaClient, file: &str) -> Result<()> {
         let failed = pods.iter().any(|p| is_terminal_failure(&p.status));
 
         if running >= replicas {
-            output::print_success(&format!(
-                "Deployment '{name}' is running ({running}/{replicas} replicas)"
-            ));
+            let elapsed = format!("{:.1}s", start.elapsed().as_secs_f64());
+            let status = format!(
+                "{}",
+                output::color("green").apply_to("● Deployed")
+            );
+            let timing = format!("{running}/{replicas} pods ready · {elapsed}");
+            render_deploy_panel(&name, &steps, &status, &timing);
             return Ok(());
         }
 
         if failed {
-            output::print_error(&format!(
-                "Deployment '{name}' has failed pods. Check: nexa pods -p {project}"
-            ));
+            let status = format!(
+                "{}",
+                output::color("red").apply_to("● Failed")
+            );
+            render_deploy_panel(&name, &steps, &status, "");
             anyhow::bail!("deployment '{name}' has failed pods");
         }
 
