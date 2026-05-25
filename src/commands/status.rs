@@ -3,6 +3,7 @@ use nexa_core::domain::models::{Deployment, DeploymentStatus, Pod, PodStatus, Pr
 
 use crate::client::NexaClient;
 use crate::output;
+use crate::output::Panel;
 
 pub async fn status(client: &NexaClient) -> Result<()> {
     let projects: Vec<Project> = client.get("/api/v1/projects").await?;
@@ -45,28 +46,23 @@ pub async fn status(client: &NexaClient) -> Result<()> {
         return Ok(());
     }
 
-    output::print_header("Cluster Status");
-    println!();
-    output::print_kv("Cluster", "single-node");
-    output::print_kv("Projects", &projects.len().to_string());
-    output::print_kv(
-        "Deployments",
-        &format!(
-            "{} ({} running, {} stopped)",
-            deployments.len(),
-            running_deployments,
-            stopped_deployments,
-        ),
-    );
-    output::print_kv(
-        "Pods",
-        &format!(
-            "{} ({} running, {} restarting)",
-            pods.len(),
-            running_pods,
-            restarting_pods,
-        ),
-    );
+    let status_str = output::status_dot("running");
+
+    Panel::new(&format!("{} Cluster Status", output::icon("cluster")))
+        .kv(&[
+            ("Mode", "single-node"),
+            ("Status", &status_str),
+            ("Projects", &projects.len().to_string()),
+            (
+                "Deployments",
+                &format!("{} running · {} stopped", running_deployments, stopped_deployments),
+            ),
+            (
+                "Pods",
+                &format!("{} running · {} restarting", running_pods, restarting_pods),
+            ),
+        ])
+        .render();
 
     Ok(())
 }
