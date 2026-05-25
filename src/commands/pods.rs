@@ -3,6 +3,7 @@ use nexa_core::domain::models::Pod;
 
 use crate::client::NexaClient;
 use crate::output;
+use crate::output::Panel;
 
 pub async fn pods(client: &NexaClient, project: Option<&str>) -> Result<()> {
     let path = match project {
@@ -31,10 +32,13 @@ pub async fn pods(client: &NexaClient, project: Option<&str>) -> Result<()> {
         })
         .collect();
 
-    output::print_table(
-        &["Name", "Project", "Deployment", "Status", "Image", "Age"],
-        &rows,
-    );
+    Panel::new(&format!("{} Pods", output::icon("pod")))
+        .count(&format!("{} total", pods.len()))
+        .table(
+            &["Name", "Project", "Deployment", "Status", "Image", "Age"],
+            &rows,
+        )
+        .render();
 
     Ok(())
 }
