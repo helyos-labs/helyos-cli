@@ -3,6 +3,7 @@ use nexa_core::domain::models::Deployment;
 
 use crate::client::NexaClient;
 use crate::output;
+use crate::output::Panel;
 
 pub async fn deployments(client: &NexaClient, project: Option<&str>) -> Result<()> {
     let path = match project {
@@ -31,10 +32,13 @@ pub async fn deployments(client: &NexaClient, project: Option<&str>) -> Result<(
         })
         .collect();
 
-    output::print_table(
-        &["Name", "Project", "Status", "Replicas", "Image", "Age"],
-        &rows,
-    );
+    Panel::new(&format!("{} Deployments", output::icon("deploy")))
+        .count(&format!("{} total", deployments.len()))
+        .table(
+            &["Name", "Project", "Status", "Replicas", "Image", "Age"],
+            &rows,
+        )
+        .render();
 
     Ok(())
 }
