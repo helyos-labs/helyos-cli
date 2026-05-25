@@ -39,6 +39,13 @@ pub async fn handle_key(app: &mut App, key: KeyEvent) -> anyhow::Result<bool> {
             }
             Ok(false)
         }
+        InputMode::LogView(_, _) => match key.code {
+            KeyCode::Char('q') | KeyCode::Esc => {
+                app.input_mode = InputMode::Normal;
+                Ok(false)
+            }
+            _ => Ok(false),
+        },
         InputMode::Normal => match key.code {
             KeyCode::Char('q') | KeyCode::Esc => Ok(true),
             KeyCode::Tab => {
@@ -79,6 +86,12 @@ pub async fn handle_key(app: &mut App, key: KeyEvent) -> anyhow::Result<bool> {
                             Some(format!("Scale {deployment} — Replicas: "));
                         app.input_mode = InputMode::ScaleInput(deployment, String::new());
                     }
+                }
+                Ok(false)
+            }
+            KeyCode::Char('l') | KeyCode::Enter => {
+                if app.active_panel == ActivePanel::Pods && !app.pods.is_empty() {
+                    app.open_log_view().await;
                 }
                 Ok(false)
             }

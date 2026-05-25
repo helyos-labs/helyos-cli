@@ -37,6 +37,7 @@ pub enum InputMode {
     Normal,
     ConfirmDelete(String),
     ScaleInput(String, String),
+    LogView(String, Vec<String>),
 }
 
 pub struct App {
@@ -205,6 +206,44 @@ impl App {
             }
         }
         self.input_mode = InputMode::Normal;
+    }
+
+    pub async fn open_log_view(&mut self) {
+        if let Some(pod) = self.pods.get(self.pod_cursor) {
+            let name = pod.container_name();
+            let project = &pod.project;
+            let deployment = &pod.deployment_name;
+            let path = format!(
+                "/api/v1/projects/{project}/deployments/{deployment}/logs?tail=100"
+            );
+            match self.client.get_stream(&path).await {
+                Ok(resp) => {
+                    use futures::StreamExt;
+                    let mut stream = resp.bytes_stream();
+                    let mut lines = Vec::new();
+                    let _ = tokio::time::timeout(
+                        std::time::Duration::from_secs(2),
+                        async {
+                            while let Some(chunk) = stream.next().await {
+                                if let Ok(bytes) = chunk {
+                                    let text = String::from_utf8_lossy(&bytes);
+                                    for line in text.lines() {
+                                        if let Some(data) = line.strip_prefix("data: ") {
+                                            lines.push(data.to_string());
+                                        }
+                                    }
+                                }
+                            }
+                        },
+                    )
+                    .await;
+                    self.input_mode = InputMode::LogView(name, lines);
+                }
+                Err(e) => {
+                    self.status_message = Some(format!("✗ Failed to open logs: {e}"));
+                }
+            }
+        }
     }
 
     pub fn push_event(&mut self, event: ClusterEvent) {

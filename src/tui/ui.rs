@@ -4,10 +4,15 @@ use ratatui::text::{Line, Span};
 use ratatui::widgets::{Block, Borders, Clear, Paragraph};
 use ratatui::Frame;
 
-use super::app::{ActivePanel, App};
+use super::app::{ActivePanel, App, InputMode};
 use super::widgets::{event_list, node_gauge, pod_table};
 
 pub fn draw(f: &mut Frame, app: &App) {
+    if let InputMode::LogView(name, lines) = &app.input_mode {
+        draw_log_view(f, f.area(), name, lines);
+        return;
+    }
+
     let chunks = Layout::default()
         .direction(Direction::Vertical)
         .constraints([
@@ -162,4 +167,47 @@ fn draw_help_overlay(f: &mut Frame, area: Rect) {
 
     let para = Paragraph::new(help_text).block(block);
     f.render_widget(para, popup_area);
+}
+
+fn draw_log_view(f: &mut Frame, area: Rect, name: &str, lines: &[String]) {
+    let chunks = Layout::default()
+        .direction(Direction::Vertical)
+        .constraints([Constraint::Min(3), Constraint::Length(1)])
+        .split(area);
+
+    let block = Block::default()
+        .borders(Borders::ALL)
+        .border_style(Style::default().fg(Color::Rgb(88, 166, 255)))
+        .title(format!(" ● Logs — {name} "))
+        .title_style(
+            Style::default()
+                .fg(Color::Rgb(88, 166, 255))
+                .add_modifier(Modifier::BOLD),
+        )
+        .style(Style::default().bg(Color::Rgb(13, 17, 23)));
+
+    let visible_height = (chunks[0].height as usize).saturating_sub(2);
+    let start = lines.len().saturating_sub(visible_height);
+    let visible_lines: Vec<Line> = lines[start..]
+        .iter()
+        .map(|line| {
+            Line::from(vec![
+                Span::styled("│ ", Style::default().fg(Color::Rgb(48, 54, 61))),
+                Span::styled(
+                    line.as_str(),
+                    Style::default().fg(Color::Rgb(230, 237, 243)),
+                ),
+            ])
+        })
+        .collect();
+
+    let para = Paragraph::new(visible_lines).block(block);
+    f.render_widget(para, chunks[0]);
+
+    let keybinds = Line::from(vec![
+        Span::styled(" q", Style::default().fg(Color::Rgb(201, 209, 217))),
+        Span::styled(" back", Style::default().fg(Color::Rgb(72, 79, 88))),
+    ]);
+    let footer = Paragraph::new(keybinds);
+    f.render_widget(footer, chunks[1]);
 }
