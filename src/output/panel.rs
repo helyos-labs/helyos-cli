@@ -126,7 +126,8 @@ impl Panel {
         }
         let right = self.count.as_deref().unwrap_or("");
         let right_len = right.len();
-        let title_len = title_plain.len() + 1 + self.subtitle.as_ref().map(|s| s.len() + 1).unwrap_or(0);
+        let title_len =
+            title_plain.len() + 1 + self.subtitle.as_ref().map(|s| s.len() + 1).unwrap_or(0);
         let pad = if inner > title_len + right_len + 1 {
             inner - title_len - right_len - 1
         } else {
@@ -208,7 +209,8 @@ impl Panel {
                     })
                     .collect::<Vec<_>>()
                     .join("  ");
-                let hdr_visible: usize = widths.iter().sum::<usize>() + (col_count.saturating_sub(1)) * 2;
+                let hdr_visible: usize =
+                    widths.iter().sum::<usize>() + (col_count.saturating_sub(1)) * 2;
                 let hpad = inner.saturating_sub(hdr_visible + 2);
                 out.push_str(&format!(
                     "{} {}{}{}\n",
@@ -289,7 +291,8 @@ impl Panel {
             PanelContent::Steps(steps) => {
                 for (icon, label, desc) in steps {
                     let step_line = format!(" {icon} {}  {desc}", text_sec.apply_to(label));
-                    let vis_len = 1 + console::strip_ansi_codes(icon).len()
+                    let vis_len = 1
+                        + console::strip_ansi_codes(icon).len()
                         + 1
                         + label.len()
                         + 2
@@ -403,7 +406,10 @@ mod tests {
         for line in output.lines() {
             let stripped = console::strip_ansi_codes(line);
             let char_count = stripped.chars().count();
-            assert!(char_count <= 42, "line too long ({char_count} chars): {stripped}");
+            assert!(
+                char_count <= 42,
+                "line too long ({char_count} chars): {stripped}"
+            );
         }
     }
 }

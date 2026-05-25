@@ -19,15 +19,17 @@ impl EventHandler {
 
         let key_tx = tx.clone();
         let tick = tick_rate;
-        std::thread::spawn(move || loop {
-            if event::poll(tick).unwrap_or(false) {
-                if let Ok(Event::Key(key)) = event::read() {
-                    if key_tx.send(AppEvent::Key(key)).is_err() {
-                        return;
+        std::thread::spawn(move || {
+            loop {
+                if event::poll(tick).unwrap_or(false) {
+                    if let Ok(Event::Key(key)) = event::read() {
+                        if key_tx.send(AppEvent::Key(key)).is_err() {
+                            return;
+                        }
                     }
+                } else if key_tx.send(AppEvent::Tick).is_err() {
+                    return;
                 }
-            } else if key_tx.send(AppEvent::Tick).is_err() {
-                return;
             }
         });
 
@@ -51,10 +53,7 @@ impl EventHandler {
                                         if let Ok(evt) =
                                             serde_json::from_str::<super::app::ClusterEvent>(data)
                                         {
-                                            if sse_tx
-                                                .send(AppEvent::ClusterEvent(evt))
-                                                .is_err()
-                                            {
+                                            if sse_tx.send(AppEvent::ClusterEvent(evt)).is_err() {
                                                 return;
                                             }
                                         }

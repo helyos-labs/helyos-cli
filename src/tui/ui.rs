@@ -1,8 +1,8 @@
+use ratatui::Frame;
 use ratatui::layout::{Constraint, Direction, Layout, Rect};
 use ratatui::style::{Color, Modifier, Style};
 use ratatui::text::{Line, Span};
 use ratatui::widgets::{Block, Borders, Clear, Paragraph};
-use ratatui::Frame;
 
 use super::app::{ActivePanel, App, InputMode};
 use super::widgets::{event_list, node_gauge, pod_table};
@@ -58,7 +58,9 @@ fn draw_status_bar(f: &mut Frame, area: Rect, app: &App) {
         ),
         Span::styled(status_text, Style::default().fg(status_color)),
         Span::styled(
-            format!("  │ ◆ {node_count} nodes │ ● {pod_count} pods │ ◎ {deploy_count} deploys │ ↻ 2s"),
+            format!(
+                "  │ ◆ {node_count} nodes │ ● {pod_count} pods │ ◎ {deploy_count} deploys │ ↻ 2s"
+            ),
             Style::default().fg(Color::Rgb(139, 148, 158)),
         ),
     ]);
@@ -128,27 +130,45 @@ fn draw_help_overlay(f: &mut Frame, area: Rect) {
     let help_text = vec![
         Line::from(""),
         Line::from(vec![
-            Span::styled("  Tab       ", Style::default().fg(Color::Rgb(88, 166, 255))),
+            Span::styled(
+                "  Tab       ",
+                Style::default().fg(Color::Rgb(88, 166, 255)),
+            ),
             Span::raw("Cycle panels"),
         ]),
         Line::from(vec![
-            Span::styled("  ↑↓ / jk   ", Style::default().fg(Color::Rgb(88, 166, 255))),
+            Span::styled(
+                "  ↑↓ / jk   ",
+                Style::default().fg(Color::Rgb(88, 166, 255)),
+            ),
             Span::raw("Navigate"),
         ]),
         Line::from(vec![
-            Span::styled("  d         ", Style::default().fg(Color::Rgb(88, 166, 255))),
+            Span::styled(
+                "  d         ",
+                Style::default().fg(Color::Rgb(88, 166, 255)),
+            ),
             Span::raw("Delete selected pod"),
         ]),
         Line::from(vec![
-            Span::styled("  s         ", Style::default().fg(Color::Rgb(88, 166, 255))),
+            Span::styled(
+                "  s         ",
+                Style::default().fg(Color::Rgb(88, 166, 255)),
+            ),
             Span::raw("Scale deployment"),
         ]),
         Line::from(vec![
-            Span::styled("  ?         ", Style::default().fg(Color::Rgb(88, 166, 255))),
+            Span::styled(
+                "  ?         ",
+                Style::default().fg(Color::Rgb(88, 166, 255)),
+            ),
             Span::raw("Toggle help"),
         ]),
         Line::from(vec![
-            Span::styled("  q / Esc   ", Style::default().fg(Color::Rgb(88, 166, 255))),
+            Span::styled(
+                "  q / Esc   ",
+                Style::default().fg(Color::Rgb(88, 166, 255)),
+            ),
             Span::raw("Quit"),
         ]),
         Line::from(""),

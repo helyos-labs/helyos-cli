@@ -84,7 +84,10 @@ impl App {
             .client
             .get::<Vec<nexa_core::domain::models::Deployment>>("/api/v1/deployments")
             .await;
-        let nodes_result = self.client.get::<Vec<NodeStats>>("/api/v1/nodes/stats").await;
+        let nodes_result = self
+            .client
+            .get::<Vec<NodeStats>>("/api/v1/nodes/stats")
+            .await;
 
         match (pods_result, deployments_result, nodes_result) {
             (Ok(pods), Ok(deployments), Ok(nodes)) => {
@@ -184,8 +187,7 @@ impl App {
             if let Some(pod) = self.pods.get(self.pod_cursor) {
                 let project = pod.project.clone();
                 let deployment = pod.deployment_name.clone();
-                let path =
-                    format!("/api/v1/projects/{project}/deployments/{deployment}/scale");
+                let path = format!("/api/v1/projects/{project}/deployments/{deployment}/scale");
                 let body = serde_json::json!({ "replicas": replicas }).to_string();
                 match self
                     .client
@@ -213,29 +215,24 @@ impl App {
             let name = pod.container_name();
             let project = &pod.project;
             let deployment = &pod.deployment_name;
-            let path = format!(
-                "/api/v1/projects/{project}/deployments/{deployment}/logs?tail=100"
-            );
+            let path = format!("/api/v1/projects/{project}/deployments/{deployment}/logs?tail=100");
             match self.client.get_stream(&path).await {
                 Ok(resp) => {
                     use futures::StreamExt;
                     let mut stream = resp.bytes_stream();
                     let mut lines = Vec::new();
-                    let _ = tokio::time::timeout(
-                        std::time::Duration::from_secs(2),
-                        async {
-                            while let Some(chunk) = stream.next().await {
-                                if let Ok(bytes) = chunk {
-                                    let text = String::from_utf8_lossy(&bytes);
-                                    for line in text.lines() {
-                                        if let Some(data) = line.strip_prefix("data: ") {
-                                            lines.push(data.to_string());
-                                        }
+                    let _ = tokio::time::timeout(std::time::Duration::from_secs(2), async {
+                        while let Some(chunk) = stream.next().await {
+                            if let Ok(bytes) = chunk {
+                                let text = String::from_utf8_lossy(&bytes);
+                                for line in text.lines() {
+                                    if let Some(data) = line.strip_prefix("data: ") {
+                                        lines.push(data.to_string());
                                     }
                                 }
                             }
-                        },
-                    )
+                        }
+                    })
                     .await;
                     self.input_mode = InputMode::LogView(name, lines);
                 }

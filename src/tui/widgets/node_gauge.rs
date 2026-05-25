@@ -1,8 +1,8 @@
+use ratatui::Frame;
 use ratatui::layout::{Constraint, Direction, Layout, Rect};
 use ratatui::style::{Color, Style};
 use ratatui::text::{Line, Span};
 use ratatui::widgets::{Block, Borders, Paragraph};
-use ratatui::Frame;
 
 use crate::tui::app::App;
 
@@ -56,8 +56,7 @@ pub fn render(f: &mut Frame, area: Rect, app: &App, is_active: bool) {
     f.render_widget(block, area);
 
     if app.nodes.is_empty() {
-        let msg = Paragraph::new("No node data")
-            .style(Style::default().fg(Color::Rgb(72, 79, 88)));
+        let msg = Paragraph::new("No node data").style(Style::default().fg(Color::Rgb(72, 79, 88)));
         f.render_widget(msg, inner);
         return;
     }

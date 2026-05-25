@@ -7,12 +7,7 @@ pub struct DeployStep {
     pub detail: String,
 }
 
-pub fn render_deploy_panel(
-    name: &str,
-    steps: &[DeployStep],
-    status: &str,
-    timing: &str,
-) {
+pub fn render_deploy_panel(name: &str, steps: &[DeployStep], status: &str, timing: &str) {
     if super::is_json_mode() {
         return;
     }

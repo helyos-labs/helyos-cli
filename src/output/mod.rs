@@ -1,10 +1,10 @@
 mod age;
+pub mod deploy;
+mod panel;
 #[allow(dead_code)]
 mod spinner;
 #[allow(dead_code)]
 mod style;
-pub mod deploy;
-mod panel;
 mod table;
 
 pub use age::format_age;

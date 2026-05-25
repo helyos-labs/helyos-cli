@@ -22,8 +22,8 @@ pub async fn nodes(client: &NexaClient) -> Result<()> {
         .iter()
         .map(|n| {
             let cpu_pct = if n.resources.cpu_cores > 0.0 {
-                ((n.resources.cpu_cores - n.resources.cpu_available) / n.resources.cpu_cores * 100.0)
-                    as u32
+                ((n.resources.cpu_cores - n.resources.cpu_available) / n.resources.cpu_cores
+                    * 100.0) as u32
             } else {
                 0
             };

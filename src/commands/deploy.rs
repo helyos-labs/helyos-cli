@@ -93,20 +93,14 @@ pub async fn deploy(client: &NexaClient, file: &str) -> Result<()> {
 
         if running >= replicas {
             let elapsed = format!("{:.1}s", start.elapsed().as_secs_f64());
-            let status = format!(
-                "{}",
-                output::color("green").apply_to("● Deployed")
-            );
+            let status = format!("{}", output::color("green").apply_to("● Deployed"));
             let timing = format!("{running}/{replicas} pods ready · {elapsed}");
             render_deploy_panel(&name, &steps, &status, &timing);
             return Ok(());
         }
 
         if failed {
-            let status = format!(
-                "{}",
-                output::color("red").apply_to("● Failed")
-            );
+            let status = format!("{}", output::color("red").apply_to("● Failed"));
             render_deploy_panel(&name, &steps, &status, "");
             anyhow::bail!("deployment '{name}' has failed pods");
         }

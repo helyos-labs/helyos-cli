@@ -1,8 +1,8 @@
+use ratatui::Frame;
 use ratatui::layout::Rect;
 use ratatui::style::{Color, Style};
 use ratatui::text::{Line, Span};
 use ratatui::widgets::{Block, Borders, Paragraph};
-use ratatui::Frame;
 
 use crate::tui::app::App;
 
@@ -49,19 +49,16 @@ pub fn render(f: &mut Frame, area: Rect, app: &App, is_active: bool) {
             };
             let color = action_color(&e.action);
             Line::from(vec![
-                Span::styled(
-                    format!("{time}  "),
-                    Style::default().fg(color),
-                ),
+                Span::styled(format!("{time}  "), Style::default().fg(color)),
                 Span::styled(
                     format!("{:<8}", e.kind),
                     Style::default().fg(Color::Rgb(139, 148, 158)),
                 ),
-                Span::styled(e.name.clone(), Style::default().fg(Color::Rgb(230, 237, 243))),
                 Span::styled(
-                    format!(" {}", e.action),
-                    Style::default().fg(color),
+                    e.name.clone(),
+                    Style::default().fg(Color::Rgb(230, 237, 243)),
                 ),
+                Span::styled(format!(" {}", e.action), Style::default().fg(color)),
             ])
         })
         .collect();

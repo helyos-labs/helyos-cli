@@ -55,7 +55,10 @@ pub async fn status(client: &NexaClient) -> Result<()> {
             ("Projects", &projects.len().to_string()),
             (
                 "Deployments",
-                &format!("{} running · {} stopped", running_deployments, stopped_deployments),
+                &format!(
+                    "{} running · {} stopped",
+                    running_deployments, stopped_deployments
+                ),
             ),
             (
                 "Pods",

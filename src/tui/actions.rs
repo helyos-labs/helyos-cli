@@ -82,8 +82,7 @@ pub async fn handle_key(app: &mut App, key: KeyEvent) -> anyhow::Result<bool> {
                 if app.active_panel == ActivePanel::Pods {
                     if let Some(pod) = app.selected_pod() {
                         let deployment = pod.deployment_name.clone();
-                        app.status_message =
-                            Some(format!("Scale {deployment} — Replicas: "));
+                        app.status_message = Some(format!("Scale {deployment} — Replicas: "));
                         app.input_mode = InputMode::ScaleInput(deployment, String::new());
                     }
                 }
