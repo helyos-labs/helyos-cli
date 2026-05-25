@@ -89,7 +89,8 @@ pub fn status_style(status: &str) -> Style {
 /// Returns a formatted `"● {status}"` string colored with `status_style`.
 pub fn status_dot(status: &str) -> String {
     let style = status_style(status);
-    format!("{}", style.apply_to(format!("● {status}")))
+    let lower = status.to_lowercase();
+    format!("{}", style.apply_to(format!("● {lower}")))
 }
 
 // ---------------------------------------------------------------------------
