@@ -29,10 +29,14 @@ pub async fn list(client: &NexaClient, project: Option<&str>) -> Result<()> {
         })
         .collect();
 
-    output::print_table(
-        &["DOMAIN", "PROJECT", "DEPLOYMENT", "TLS", "CREATED"],
-        &rows,
-    );
+    output::Panel::new(&format!("{} Routes", output::icon("event")))
+        .count(&format!("{} total", routes.len()))
+        .table(
+            &["Domain", "Project", "Deployment", "TLS", "Created"],
+            &rows,
+        )
+        .render();
+
     Ok(())
 }
 

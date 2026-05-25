@@ -43,7 +43,11 @@ pub async fn list(client: &NexaClient, project: &str) -> Result<()> {
         .map(|s| vec![s.clone(), project.to_string()])
         .collect();
 
-    output::print_table(&["Name", "Project"], &rows);
+    output::Panel::new(&format!("{} Secrets", output::icon("pod")))
+        .count(&format!("{} total", secrets.len()))
+        .table(&["Name", "Project"], &rows)
+        .render();
+
     Ok(())
 }
 

@@ -17,7 +17,10 @@ pub async fn list_projects(client: &NexaClient) -> Result<()> {
         .map(|p| vec![p.name.clone(), output::format_age(&p.created_at)])
         .collect();
 
-    output::print_table(&["Name", "Age"], &rows);
+    output::Panel::new(&format!("{} Projects", output::icon("cluster")))
+        .count(&format!("{} total", projects.len()))
+        .table(&["Name", "Age"], &rows)
+        .render();
 
     Ok(())
 }
