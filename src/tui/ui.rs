@@ -21,7 +21,7 @@ pub fn draw(f: &mut Frame, app: &App) {
     draw_status_bar(f, chunks[0], app);
     draw_main_panels(f, chunks[1], app);
     event_list::render(f, chunks[2], app, app.active_panel == ActivePanel::Events);
-    draw_keybinds(f, chunks[3]);
+    draw_keybinds(f, chunks[3], app);
 
     if app.show_help {
         draw_help_overlay(f, f.area());
@@ -78,7 +78,20 @@ fn draw_main_panels(f: &mut Frame, area: Rect, app: &App) {
     node_gauge::render(f, chunks[1], app, app.active_panel == ActivePanel::Nodes);
 }
 
-fn draw_keybinds(f: &mut Frame, area: Rect) {
+fn draw_keybinds(f: &mut Frame, area: Rect, app: &App) {
+    if let Some(msg) = &app.status_message {
+        let style = if msg.starts_with('✓') {
+            Style::default().fg(Color::Rgb(63, 185, 80))
+        } else if msg.starts_with('✗') {
+            Style::default().fg(Color::Rgb(248, 81, 73))
+        } else {
+            Style::default().fg(Color::Rgb(210, 153, 34))
+        };
+        let para = Paragraph::new(format!(" {msg}")).style(style);
+        f.render_widget(para, area);
+        return;
+    }
+
     let line = Line::from(vec![
         Span::styled(" q", Style::default().fg(Color::Rgb(201, 209, 217))),
         Span::styled(" quit  ", Style::default().fg(Color::Rgb(72, 79, 88))),

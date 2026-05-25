@@ -32,6 +32,13 @@ pub struct ClusterEvent {
     pub message: String,
 }
 
+#[derive(Debug, Clone, PartialEq)]
+pub enum InputMode {
+    Normal,
+    ConfirmDelete(String),
+    ScaleInput(String, String),
+}
+
 pub struct App {
     pub client: NexaClient,
     pub active_panel: ActivePanel,
@@ -44,6 +51,8 @@ pub struct App {
     pub event_cursor: usize,
     pub connected: bool,
     pub show_help: bool,
+    pub input_mode: InputMode,
+    pub status_message: Option<String>,
 }
 
 impl App {
@@ -60,6 +69,8 @@ impl App {
             event_cursor: 0,
             connected: false,
             show_help: false,
+            input_mode: InputMode::Normal,
+            status_message: None,
         }
     }
 
@@ -142,6 +153,58 @@ impl App {
             ActivePanel::Nodes => ActivePanel::Pods,
             ActivePanel::Events => ActivePanel::Nodes,
         };
+    }
+
+    pub fn selected_pod(&self) -> Option<&nexa_core::domain::models::Pod> {
+        self.pods.get(self.pod_cursor)
+    }
+
+    pub async fn delete_selected_pod(&mut self) {
+        if let Some(pod) = self.pods.get(self.pod_cursor) {
+            let project = pod.project.clone();
+            let deployment = pod.deployment_name.clone();
+            let name = pod.container_name();
+            let path = format!("/api/v1/projects/{project}/deployments/{deployment}");
+            match self.client.delete(&path).await {
+                Ok(()) => {
+                    self.status_message = Some(format!("✓ Deleted {name}"));
+                    self.refresh().await;
+                }
+                Err(e) => {
+                    self.status_message = Some(format!("✗ {e}"));
+                }
+            }
+        }
+        self.input_mode = InputMode::Normal;
+    }
+
+    pub async fn scale_deployment(&mut self, replicas_str: &str) {
+        if let Ok(replicas) = replicas_str.parse::<u32>() {
+            if let Some(pod) = self.pods.get(self.pod_cursor) {
+                let project = pod.project.clone();
+                let deployment = pod.deployment_name.clone();
+                let path =
+                    format!("/api/v1/projects/{project}/deployments/{deployment}/scale");
+                let body = serde_json::json!({ "replicas": replicas }).to_string();
+                match self
+                    .client
+                    .post_json::<nexa_core::domain::models::Deployment>(&path, &body)
+                    .await
+                {
+                    Ok(d) => {
+                        self.status_message = Some(format!(
+                            "✓ Scaled {} to {} replicas",
+                            deployment, d.spec.replicas
+                        ));
+                        self.refresh().await;
+                    }
+                    Err(e) => {
+                        self.status_message = Some(format!("✗ {e}"));
+                    }
+                }
+            }
+        }
+        self.input_mode = InputMode::Normal;
     }
 
     pub fn push_event(&mut self, event: ClusterEvent) {
