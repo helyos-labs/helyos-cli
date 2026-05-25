@@ -1,4 +1,4 @@
-use console::Style;
+use super::style;
 
 pub fn print_table(headers: &[&str], rows: &[Vec<String>]) {
     if super::is_json_mode() {
@@ -33,14 +33,14 @@ pub fn print_table(headers: &[&str], rows: &[Vec<String>]) {
         }
     }
 
-    let bold = Style::new().bold();
+    let text_sec = style::color("text-secondary");
     let header_line: String = headers
         .iter()
         .enumerate()
         .map(|(i, h)| {
             format!(
                 "{}",
-                bold.apply_to(format!("{:<width$}", h.to_uppercase(), width = widths[i]))
+                text_sec.apply_to(format!("{:<width$}", h.to_uppercase(), width = widths[i]))
             )
         })
         .collect::<Vec<_>>()
@@ -58,15 +58,10 @@ pub fn print_table(headers: &[&str], rows: &[Vec<String>]) {
                     .get(i)
                     .is_some_and(|h| h.eq_ignore_ascii_case("status"))
                 {
-                    let s = match cell.to_lowercase().as_str() {
-                        "running" => Style::new().green(),
-                        "degraded" | "restarting" => Style::new().yellow(),
-                        "failed" | "crashloopbackoff" => Style::new().red(),
-                        "stopped" | "stopping" => Style::new().dim(),
-                        "pending" | "creating" => Style::new().cyan(),
-                        _ => Style::new(),
-                    };
-                    return format!("{}", s.apply_to(formatted));
+                    let dot = style::status_dot(cell);
+                    let stripped = console::strip_ansi_codes(&dot);
+                    let pad = w.saturating_sub(stripped.len());
+                    return format!("{dot}{}", " ".repeat(pad));
                 }
                 formatted
             })
