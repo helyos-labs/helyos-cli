@@ -9,6 +9,7 @@ pub enum ActivePanel {
     Events,
 }
 
+#[allow(dead_code)]
 #[derive(Debug, Clone, Deserialize)]
 pub struct NodeStats {
     pub name: String,
@@ -21,6 +22,7 @@ pub struct NodeStats {
     pub pod_count: u32,
 }
 
+#[allow(dead_code)]
 #[derive(Debug, Clone, Deserialize)]
 pub struct ClusterEvent {
     pub timestamp: String,

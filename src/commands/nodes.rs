@@ -81,6 +81,7 @@ fn format_gauge(percent: u32) -> String {
     )
 }
 
+#[allow(dead_code)]
 fn format_bytes(bytes: u64) -> String {
     if bytes >= 1_073_741_824 {
         format!("{:.1}Gi", bytes as f64 / 1_073_741_824.0)

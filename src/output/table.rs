@@ -1,5 +1,6 @@
 use super::style;
 
+#[allow(dead_code)]
 pub fn print_table(headers: &[&str], rows: &[Vec<String>]) {
     if super::is_json_mode() {
         let objects: Vec<serde_json::Value> = rows

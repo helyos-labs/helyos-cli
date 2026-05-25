@@ -16,6 +16,7 @@ pub use style::{
     color, icon, print_error, print_error_with_hint, print_header, print_kv, print_success,
     print_warning, status_dot, status_style,
 };
+#[allow(unused_imports)]
 pub use table::print_table;
 
 use std::sync::atomic::{AtomicBool, Ordering};

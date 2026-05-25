@@ -89,10 +89,12 @@ impl Panel {
         print!("{output}");
     }
 
+    #[allow(dead_code)]
     pub fn render_to_string(&self) -> String {
         self.build(terminal_width())
     }
 
+    #[allow(dead_code)]
     pub fn render_to_string_with_width(&self, width: usize) -> String {
         self.build(width)
     }
