@@ -13,6 +13,7 @@ pub mod scale;
 pub mod secret;
 pub mod setup;
 pub mod status;
+pub mod top;
 
 pub use deploy::deploy;
 pub use deployments::deployments;
