@@ -143,4 +143,11 @@ impl App {
             ActivePanel::Events => ActivePanel::Nodes,
         };
     }
+
+    pub fn push_event(&mut self, event: ClusterEvent) {
+        self.events.push(event);
+        if self.events.len() > 100 {
+            self.events.remove(0);
+        }
+    }
 }

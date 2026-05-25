@@ -334,7 +334,7 @@ async fn main() -> anyhow::Result<()> {
         Commands::Init { name, image } => commands::init(name.as_deref(), image.as_deref()),
         Commands::Deploy { file } => commands::deploy(&client, &file).await,
         Commands::Status => commands::status(&client).await,
-        Commands::Top => commands::top::top(client).await,
+        Commands::Top => commands::top::top(client, &cli.server).await,
         Commands::Pods { project } => commands::pods(&client, project.as_deref()).await,
         Commands::Deployments { project } => {
             commands::deployments(&client, project.as_deref()).await
