@@ -3,9 +3,12 @@ mod age;
 mod spinner;
 #[allow(dead_code)]
 mod style;
+mod panel;
 mod table;
 
 pub use age::format_age;
+#[allow(unused_imports)]
+pub use panel::Panel;
 pub use spinner::Spinner;
 #[allow(unused_imports)]
 pub use style::{
