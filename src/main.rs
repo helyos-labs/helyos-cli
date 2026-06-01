@@ -333,6 +333,12 @@ enum SetupComponent {
 async fn main() -> anyhow::Result<()> {
     let cli = Cli::parse();
     output::set_json_mode(cli.json);
+
+    if cli.server.starts_with("http://") && cli.server != "http://localhost:6443" && cli.server != "http://127.0.0.1:6443" {
+        eprintln!("Warning: communicating over unencrypted HTTP. Secrets and tokens may be exposed.");
+        eprintln!("  Use --server https://... for production environments.\n");
+    }
+
     let client = client::NexaClient::new(&cli.server, cli.token.as_deref());
 
     let result = match cli.command {
