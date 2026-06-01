@@ -449,8 +449,10 @@ async fn main() -> anyhow::Result<()> {
     };
 
     if let Err(e) = result {
-        let msg = e.to_string();
-        if msg.contains("Connection refused") || msg.contains("connect") {
+        let is_connect_error = e
+            .downcast_ref::<reqwest::Error>()
+            .is_some_and(|re| re.is_connect() || re.is_timeout());
+        if is_connect_error {
             output::print_error_with_hint(
                 "Cannot connect to nexad",
                 &format!(
@@ -459,7 +461,7 @@ async fn main() -> anyhow::Result<()> {
                 ),
             );
         } else {
-            output::print_error(&msg);
+            output::print_error(&e.to_string());
         }
         std::process::exit(1);
     }
