@@ -14,7 +14,7 @@ pub struct EventHandler {
 }
 
 impl EventHandler {
-    pub fn new(tick_rate: Duration, server_url: &str) -> Self {
+    pub fn new(tick_rate: Duration, server_url: &str, token: Option<&str>) -> Self {
         let (tx, rx) = mpsc::unbounded_channel();
 
         let key_tx = tx.clone();
@@ -35,8 +35,17 @@ impl EventHandler {
 
         let sse_tx = tx.clone();
         let url = format!("{}/api/v1/events", server_url.trim_end_matches('/'));
+        let mut headers = reqwest::header::HeaderMap::new();
+        if let Some(t) = token {
+            if let Ok(val) = reqwest::header::HeaderValue::from_str(&format!("Bearer {t}")) {
+                headers.insert(reqwest::header::AUTHORIZATION, val);
+            }
+        }
         tokio::spawn(async move {
-            let client = reqwest::Client::new();
+            let client = reqwest::Client::builder()
+                .default_headers(headers)
+                .build()
+                .unwrap_or_default();
             loop {
                 match client.get(&url).send().await {
                     Ok(resp) if resp.status().is_success() => {

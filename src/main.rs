@@ -16,6 +16,10 @@ struct Cli {
     #[arg(long, default_value = "http://localhost:6443", global = true)]
     server: String,
 
+    /// API bearer token (or set NEXA_API_TOKEN env var)
+    #[arg(long, env = "NEXA_API_TOKEN", global = true)]
+    token: Option<String>,
+
     /// Output results as JSON
     #[arg(long, global = true)]
     json: bool,
@@ -329,13 +333,13 @@ enum SetupComponent {
 async fn main() -> anyhow::Result<()> {
     let cli = Cli::parse();
     output::set_json_mode(cli.json);
-    let client = client::NexaClient::new(&cli.server);
+    let client = client::NexaClient::new(&cli.server, cli.token.as_deref());
 
     let result = match cli.command {
         Commands::Init { name, image } => commands::init(name.as_deref(), image.as_deref()),
         Commands::Deploy { file } => commands::deploy(&client, &file).await,
         Commands::Status => commands::status(&client).await,
-        Commands::Top => commands::top::top(client, &cli.server).await,
+        Commands::Top => commands::top::top(client, &cli.server, cli.token.as_deref()).await,
         Commands::Pods { project } => commands::pods(&client, project.as_deref()).await,
         Commands::Deployments { project } => {
             commands::deployments(&client, project.as_deref()).await

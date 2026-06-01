@@ -1,5 +1,8 @@
+use std::time::Duration;
+
 use anyhow::Result;
 use reqwest::Client;
+use reqwest::header::{HeaderMap, HeaderValue, AUTHORIZATION};
 use serde::de::DeserializeOwned;
 
 #[derive(Debug, serde::Deserialize)]
@@ -40,10 +43,22 @@ pub struct NexaClient {
 }
 
 impl NexaClient {
-    pub fn new(base_url: &str) -> Self {
+    pub fn new(base_url: &str, token: Option<&str>) -> Self {
+        let mut headers = HeaderMap::new();
+        if let Some(t) = token {
+            if let Ok(val) = HeaderValue::from_str(&format!("Bearer {t}")) {
+                headers.insert(AUTHORIZATION, val);
+            }
+        }
+        let http = Client::builder()
+            .default_headers(headers)
+            .connect_timeout(Duration::from_secs(5))
+            .timeout(Duration::from_secs(30))
+            .build()
+            .expect("failed to build HTTP client");
         Self {
             base_url: base_url.trim_end_matches('/').to_string(),
-            http: Client::new(),
+            http,
         }
     }
 
