@@ -43,11 +43,11 @@ pub async fn run(client: NexaClient, server_url: &str, token: Option<&str>) -> a
 async fn run_app(
     terminal: &mut Terminal<CrosstermBackend<io::Stdout>>,
     client: NexaClient,
-    server_url: &str,
-    token: Option<&str>,
+    _server_url: &str,
+    _token: Option<&str>,
 ) -> anyhow::Result<()> {
+    let mut events = EventHandler::new(std::time::Duration::from_secs(2), &client);
     let mut app = App::new(client);
-    let mut events = EventHandler::new(std::time::Duration::from_secs(2), server_url, token);
 
     app.refresh().await;
 

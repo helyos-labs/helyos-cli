@@ -164,6 +164,19 @@ impl NexaClient {
         Ok(())
     }
 
+    /// Returns a reference to the underlying HTTP client.
+    ///
+    /// Use this when you need the shared client (with its configured auth
+    /// headers, timeouts, and connection pool) outside the normal request
+    /// helpers — for example, to consume an SSE event stream.
+    pub fn http_client(&self) -> &Client {
+        &self.http
+    }
+
+    pub fn base_url(&self) -> &str {
+        &self.base_url
+    }
+
     pub async fn get_stream(&self, path: &str) -> Result<reqwest::Response> {
         let url = format!("{}{path}", self.base_url);
         let resp = self.http.get(&url).send().await?;
