@@ -5,7 +5,11 @@ use crate::output;
 
 pub async fn stop(client: &NexaClient, project: Option<&str>, name: &str) -> Result<()> {
     let project = project.unwrap_or("default");
-    let path = format!("/api/v1/projects/{project}/deployments/{name}/stop");
+    let path = format!(
+        "/api/v1/projects/{}/deployments/{}/stop",
+        urlencoding::encode(project),
+        urlencoding::encode(name),
+    );
 
     client.post_empty(&path).await?;
 
@@ -23,7 +27,11 @@ pub async fn stop(client: &NexaClient, project: Option<&str>, name: &str) -> Res
 
 pub async fn remove(client: &NexaClient, project: Option<&str>, name: &str) -> Result<()> {
     let project = project.unwrap_or("default");
-    let path = format!("/api/v1/projects/{project}/deployments/{name}");
+    let path = format!(
+        "/api/v1/projects/{}/deployments/{}",
+        urlencoding::encode(project),
+        urlencoding::encode(name),
+    );
 
     client.delete(&path).await?;
 

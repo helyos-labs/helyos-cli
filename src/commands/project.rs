@@ -40,7 +40,7 @@ pub async fn create_project(client: &NexaClient, name: &str) -> Result<()> {
 }
 
 pub async fn suspend(client: &NexaClient, name: &str) -> Result<()> {
-    let path = format!("/api/v1/projects/{name}/suspend");
+    let path = format!("/api/v1/projects/{}/suspend", urlencoding::encode(name));
     client.post_empty(&path).await?;
 
     if output::is_json_mode() {
@@ -57,7 +57,7 @@ pub async fn suspend(client: &NexaClient, name: &str) -> Result<()> {
 }
 
 pub async fn resume(client: &NexaClient, name: &str) -> Result<()> {
-    let path = format!("/api/v1/projects/{name}/resume");
+    let path = format!("/api/v1/projects/{}/resume", urlencoding::encode(name));
     client.post_empty(&path).await?;
 
     if output::is_json_mode() {
@@ -74,7 +74,7 @@ pub async fn resume(client: &NexaClient, name: &str) -> Result<()> {
 }
 
 pub async fn delete_project(client: &NexaClient, name: &str) -> Result<()> {
-    let path = format!("/api/v1/projects/{name}");
+    let path = format!("/api/v1/projects/{}", urlencoding::encode(name));
     client.delete(&path).await?;
 
     if output::is_json_mode() {

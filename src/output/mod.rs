@@ -32,5 +32,8 @@ pub fn is_json_mode() -> bool {
 }
 
 pub fn print_json(value: &impl serde::Serialize) {
-    println!("{}", serde_json::to_string_pretty(value).unwrap());
+    match serde_json::to_string_pretty(value) {
+        Ok(json) => println!("{json}"),
+        Err(e) => eprintln!("Error: failed to serialize JSON output: {e}"),
+    }
 }

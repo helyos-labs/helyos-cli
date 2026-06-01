@@ -5,7 +5,7 @@ use crate::output;
 
 pub async fn drain(client: &NexaClient, name: &str) -> Result<()> {
     client
-        .post_empty(&format!("/api/v1/nodes/{name}/drain"))
+        .post_empty(&format!("/api/v1/nodes/{}/drain", urlencoding::encode(name)))
         .await?;
 
     if output::is_json_mode() {
@@ -18,7 +18,7 @@ pub async fn drain(client: &NexaClient, name: &str) -> Result<()> {
 }
 
 pub async fn remove(client: &NexaClient, name: &str) -> Result<()> {
-    client.delete(&format!("/api/v1/nodes/{name}")).await?;
+    client.delete(&format!("/api/v1/nodes/{}", urlencoding::encode(name))).await?;
 
     if output::is_json_mode() {
         output::print_json(&serde_json::json!({ "node": name, "status": "removed" }));

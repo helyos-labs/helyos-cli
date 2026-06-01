@@ -4,7 +4,7 @@ use crate::client::NexaClient;
 use crate::output;
 
 pub async fn set(client: &NexaClient, project: &str, name: &str, value: &str) -> Result<()> {
-    let path = format!("/api/v1/projects/{project}/secrets");
+    let path = format!("/api/v1/projects/{}/secrets", urlencoding::encode(project));
     let body = serde_json::json!({
         "name": name,
         "value": value,
@@ -27,7 +27,7 @@ pub async fn set(client: &NexaClient, project: &str, name: &str, value: &str) ->
 }
 
 pub async fn list(client: &NexaClient, project: &str) -> Result<()> {
-    let path = format!("/api/v1/projects/{project}/secrets");
+    let path = format!("/api/v1/projects/{}/secrets", urlencoding::encode(project));
     let secrets: Vec<String> = client.get(&path).await?;
 
     if output::is_json_mode() {
@@ -52,7 +52,11 @@ pub async fn list(client: &NexaClient, project: &str) -> Result<()> {
 }
 
 pub async fn remove(client: &NexaClient, project: &str, name: &str) -> Result<()> {
-    let path = format!("/api/v1/projects/{project}/secrets/{name}");
+    let path = format!(
+        "/api/v1/projects/{}/secrets/{}",
+        urlencoding::encode(project),
+        urlencoding::encode(name),
+    );
     client.delete(&path).await?;
 
     if output::is_json_mode() {

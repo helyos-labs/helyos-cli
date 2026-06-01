@@ -11,7 +11,11 @@ pub async fn scale(
     replicas: u32,
 ) -> Result<()> {
     let project = project.unwrap_or("default");
-    let path = format!("/api/v1/projects/{project}/deployments/{name}/scale");
+    let path = format!(
+        "/api/v1/projects/{}/deployments/{}/scale",
+        urlencoding::encode(project),
+        urlencoding::encode(name),
+    );
     let body = serde_json::json!({ "replicas": replicas }).to_string();
 
     let spinner = if !output::is_json_mode() {

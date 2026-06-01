@@ -5,7 +5,7 @@ use crate::output;
 
 pub async fn list(client: &NexaClient, project: Option<&str>) -> Result<()> {
     let path = match project {
-        Some(p) => format!("/api/v1/routes?project={p}"),
+        Some(p) => format!("/api/v1/routes?project={}", urlencoding::encode(p)),
         None => "/api/v1/routes".into(),
     };
 
@@ -64,7 +64,7 @@ pub async fn add(
 }
 
 pub async fn remove(client: &NexaClient, domain: &str) -> Result<()> {
-    client.delete(&format!("/api/v1/routes/{domain}")).await?;
+    client.delete(&format!("/api/v1/routes/{}", urlencoding::encode(domain))).await?;
     output::print_success(&format!("Route '{domain}' removed"));
     Ok(())
 }

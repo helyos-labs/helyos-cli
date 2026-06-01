@@ -7,7 +7,7 @@ use crate::output::Panel;
 
 pub async fn deployments(client: &NexaClient, project: Option<&str>) -> Result<()> {
     let path = match project {
-        Some(p) => format!("/api/v1/deployments?project={p}"),
+        Some(p) => format!("/api/v1/deployments?project={}", urlencoding::encode(p)),
         None => "/api/v1/deployments".to_string(),
     };
 

@@ -334,6 +334,12 @@ async fn main() -> anyhow::Result<()> {
     let cli = Cli::parse();
     output::set_json_mode(cli.json);
 
+    // Respect NO_COLOR (https://no-color.org/)
+    if std::env::var_os("NO_COLOR").is_some() {
+        console::set_colors_enabled(false);
+        console::set_colors_enabled_stderr(false);
+    }
+
     if cli.server.starts_with("http://") && cli.server != "http://localhost:6443" && cli.server != "http://127.0.0.1:6443" {
         eprintln!("Warning: communicating over unencrypted HTTP. Secrets and tokens may be exposed.");
         eprintln!("  Use --server https://... for production environments.\n");

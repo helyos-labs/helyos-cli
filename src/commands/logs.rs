@@ -13,7 +13,11 @@ pub async fn logs(
     tail: Option<u64>,
 ) -> Result<()> {
     let project = project.unwrap_or("default");
-    let mut path = format!("/api/v1/projects/{project}/deployments/{name}/logs");
+    let mut path = format!(
+        "/api/v1/projects/{}/deployments/{}/logs",
+        urlencoding::encode(project),
+        urlencoding::encode(name),
+    );
     if let Some(t) = tail {
         path.push_str(&format!("?tail={t}"));
     }
