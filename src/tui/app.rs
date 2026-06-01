@@ -1,3 +1,5 @@
+use std::time::Instant;
+
 use serde::Deserialize;
 
 use crate::client::NexaClient;
@@ -54,6 +56,7 @@ pub struct App {
     pub show_help: bool,
     pub input_mode: InputMode,
     pub status_message: Option<String>,
+    pub status_message_at: Option<Instant>,
 }
 
 impl App {
@@ -72,7 +75,24 @@ impl App {
             show_help: false,
             input_mode: InputMode::Normal,
             status_message: None,
+            status_message_at: None,
         }
+    }
+
+    /// Clear stale status messages after 5 seconds.
+    pub fn clear_stale_status(&mut self) {
+        if let Some(at) = self.status_message_at {
+            if at.elapsed() >= std::time::Duration::from_secs(5) {
+                self.status_message = None;
+                self.status_message_at = None;
+            }
+        }
+    }
+
+    /// Set a status message with auto-clear tracking.
+    pub fn set_status(&mut self, msg: String) {
+        self.status_message = Some(msg);
+        self.status_message_at = Some(Instant::now());
     }
 
     pub async fn refresh(&mut self) {
@@ -171,11 +191,11 @@ impl App {
             let path = format!("/api/v1/projects/{project}/deployments/{deployment}");
             match self.client.delete(&path).await {
                 Ok(()) => {
-                    self.status_message = Some(format!("✓ Deleted {name}"));
+                    self.set_status(format!("✓ Deleted {name}"));
                     self.refresh().await;
                 }
                 Err(e) => {
-                    self.status_message = Some(format!("✗ {e}"));
+                    self.set_status(format!("✗ {e}"));
                 }
             }
         }
@@ -195,14 +215,14 @@ impl App {
                     .await
                 {
                     Ok(d) => {
-                        self.status_message = Some(format!(
+                        self.set_status(format!(
                             "✓ Scaled {} to {} replicas",
                             deployment, d.spec.replicas
                         ));
                         self.refresh().await;
                     }
                     Err(e) => {
-                        self.status_message = Some(format!("✗ {e}"));
+                        self.set_status(format!("✗ {e}"));
                     }
                 }
             }
@@ -237,7 +257,7 @@ impl App {
                     self.input_mode = InputMode::LogView(name, lines);
                 }
                 Err(e) => {
-                    self.status_message = Some(format!("✗ Failed to open logs: {e}"));
+                    self.set_status(format!("✗ Failed to open logs: {e}"));
                 }
             }
         }

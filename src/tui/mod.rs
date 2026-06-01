@@ -56,6 +56,7 @@ async fn run_app(
 
         match events.next().await? {
             event::AppEvent::Tick => {
+                app.clear_stale_status();
                 app.refresh().await;
             }
             event::AppEvent::Key(key) => {

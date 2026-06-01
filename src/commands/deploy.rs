@@ -9,7 +9,7 @@ use crate::client::NexaClient;
 use crate::output::deploy::{DeployStep, render_deploy_panel};
 use crate::output::{self, Spinner};
 
-pub async fn deploy(client: &NexaClient, file: &str) -> Result<()> {
+pub async fn deploy(client: &NexaClient, file: &str, timeout_secs: u64) -> Result<()> {
     let path = Path::new(file);
     if !path.exists() {
         anyhow::bail!("file not found: {file}");
@@ -42,7 +42,7 @@ pub async fn deploy(client: &NexaClient, file: &str) -> Result<()> {
     }
 
     if output::is_json_mode() {
-        let pods = poll_until_ready(client, &project, &name, replicas).await?;
+        let pods = poll_until_ready(client, &project, &name, replicas, timeout_secs).await?;
         output::print_json(&serde_json::json!({
             "status": "ok",
             "deployment": deployment,
@@ -52,7 +52,7 @@ pub async fn deploy(client: &NexaClient, file: &str) -> Result<()> {
     }
 
     let start = Instant::now();
-    let timeout = Duration::from_secs(60);
+    let timeout = Duration::from_secs(timeout_secs);
     let mut steps: Vec<DeployStep> = vec![DeployStep {
         icon: format!("{}", output::color("green").apply_to("✓")),
         label: "Image".to_string(),
@@ -62,7 +62,7 @@ pub async fn deploy(client: &NexaClient, file: &str) -> Result<()> {
     loop {
         if start.elapsed() > timeout {
             output::print_warning(&format!(
-                "Timed out waiting for all pods (60s). Check: nexa pods -p {project}"
+                "Timed out waiting for all pods ({timeout_secs}s). Check: nexa pods -p {project}"
             ));
             anyhow::bail!("timed out waiting for deployment '{name}'");
         }
@@ -118,8 +118,9 @@ async fn poll_until_ready(
     project: &str,
     name: &str,
     replicas: u32,
+    timeout_secs: u64,
 ) -> Result<Vec<nexa_core::domain::models::Pod>> {
-    let timeout = Duration::from_secs(60);
+    let timeout = Duration::from_secs(timeout_secs);
     let start = Instant::now();
 
     loop {

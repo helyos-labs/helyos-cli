@@ -11,12 +11,19 @@ pub async fn cni(bin_dir: &str, version: &str) -> anyhow::Result<()> {
         anyhow::bail!("unsupported architecture");
     };
 
-    let filename = format!("cni-plugins-linux-{arch}-v{version}.tgz");
+    let os = match std::env::consts::OS {
+        "linux" => "linux",
+        "macos" => "darwin",
+        "windows" => "windows",
+        other => anyhow::bail!("unsupported operating system: {other}"),
+    };
+
+    let filename = format!("cni-plugins-{os}-{arch}-v{version}.tgz");
     let url = format!(
         "https://github.com/containernetworking/plugins/releases/download/v{version}/{filename}"
     );
 
-    println!("Downloading CNI plugins v{version} for linux/{arch}...");
+    println!("Downloading CNI plugins v{version} for {os}/{arch}...");
     println!("  URL: {url}");
 
     let bin_path = Path::new(bin_dir);

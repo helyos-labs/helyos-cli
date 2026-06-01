@@ -8,12 +8,12 @@ pub struct Spinner {
 impl Spinner {
     pub fn new(message: &str) -> Self {
         let bar = ProgressBar::new_spinner();
-        bar.set_style(
-            ProgressStyle::default_spinner()
-                .tick_strings(&["⠋", "⠙", "⠹", "⠸", "⠼", "⠴", "⠦", "⠧", "⠇", "⠏"])
-                .template("{spinner} {msg}")
-                .expect("invalid spinner template"),
-        );
+        let style = ProgressStyle::default_spinner()
+            .tick_strings(&["⠋", "⠙", "⠹", "⠸", "⠼", "⠴", "⠦", "⠧", "⠇", "⠏"]);
+        // Apply template; fall back to default style if the template is invalid
+        if let Ok(styled) = style.template("{spinner} {msg}") {
+            bar.set_style(styled);
+        }
         bar.set_message(message.to_string());
         bar.enable_steady_tick(std::time::Duration::from_millis(80));
         Self { bar }

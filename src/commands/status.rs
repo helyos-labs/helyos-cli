@@ -1,5 +1,5 @@
 use anyhow::Result;
-use nexa_core::domain::models::{Deployment, DeploymentStatus, Pod, PodStatus, Project};
+use nexa_core::domain::models::{Deployment, DeploymentStatus, Node, Pod, PodStatus, Project};
 
 use crate::client::NexaClient;
 use crate::output;
@@ -9,6 +9,13 @@ pub async fn status(client: &NexaClient) -> Result<()> {
     let projects: Vec<Project> = client.get("/api/v1/projects").await?;
     let deployments: Vec<Deployment> = client.get("/api/v1/deployments").await?;
     let pods: Vec<Pod> = client.get("/api/v1/pods").await?;
+    let nodes: Vec<Node> = client.get("/api/v1/nodes").await.unwrap_or_default();
+
+    let cluster_mode = if nodes.len() <= 1 {
+        "single-node".to_string()
+    } else {
+        format!("multi-node ({} nodes)", nodes.len())
+    };
 
     let running_deployments = deployments
         .iter()
@@ -30,7 +37,8 @@ pub async fn status(client: &NexaClient) -> Result<()> {
 
     if output::is_json_mode() {
         output::print_json(&serde_json::json!({
-            "cluster": "single-node",
+            "cluster": cluster_mode,
+            "nodes": nodes.len(),
             "projects": projects.len(),
             "deployments": {
                 "total": deployments.len(),
@@ -50,7 +58,7 @@ pub async fn status(client: &NexaClient) -> Result<()> {
 
     Panel::new(&format!("{} Cluster Status", output::icon("cluster")))
         .kv(&[
-            ("Mode", "single-node"),
+            ("Mode", &cluster_mode),
             ("Status", &status_str),
             ("Projects", &projects.len().to_string()),
             (

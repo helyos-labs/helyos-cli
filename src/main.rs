@@ -3,7 +3,8 @@ mod commands;
 mod output;
 mod tui;
 
-use clap::{Parser, Subcommand};
+use clap::{CommandFactory, Parser, Subcommand};
+use clap_complete::Shell;
 
 #[derive(Parser)]
 #[command(
@@ -43,6 +44,10 @@ enum Commands {
     Deploy {
         /// Path to the deployment YAML file
         file: String,
+
+        /// Timeout in seconds waiting for pods to become ready
+        #[arg(long, default_value = "60")]
+        timeout: u64,
     },
 
     /// Show cluster status overview
@@ -110,6 +115,10 @@ enum Commands {
         /// Project name
         #[arg(short, long)]
         project: Option<String>,
+
+        /// Skip confirmation prompt
+        #[arg(short, long)]
+        yes: bool,
     },
 
     /// Manage projects
@@ -163,6 +172,12 @@ enum Commands {
         #[command(subcommand)]
         component: SetupComponent,
     },
+
+    /// Generate shell completions
+    Completions {
+        /// Shell to generate completions for
+        shell: Shell,
+    },
 }
 
 #[derive(Subcommand)]
@@ -192,6 +207,10 @@ enum ProjectCommands {
     Delete {
         /// Project name
         name: String,
+
+        /// Skip confirmation prompt
+        #[arg(short, long)]
+        yes: bool,
     },
 }
 
@@ -340,6 +359,22 @@ async fn main() -> anyhow::Result<()> {
         console::set_colors_enabled_stderr(false);
     }
 
+    // Handle completions before validating server URL (completions don't need a server)
+    if let Commands::Completions { shell } = &cli.command {
+        let mut cmd = Cli::command();
+        clap_complete::generate(*shell, &mut cmd, "nexa", &mut std::io::stdout());
+        return Ok(());
+    }
+
+    // Validate --server URL
+    if reqwest::Url::parse(&cli.server).is_err() {
+        output::print_error(&format!(
+            "Invalid server URL: {}\n  Expected format: http(s)://host:port",
+            cli.server,
+        ));
+        std::process::exit(1);
+    }
+
     if cli.server.starts_with("http://") && cli.server != "http://localhost:6443" && cli.server != "http://127.0.0.1:6443" {
         eprintln!("Warning: communicating over unencrypted HTTP. Secrets and tokens may be exposed.");
         eprintln!("  Use --server https://... for production environments.\n");
@@ -349,7 +384,7 @@ async fn main() -> anyhow::Result<()> {
 
     let result = match cli.command {
         Commands::Init { name, image } => commands::init(name.as_deref(), image.as_deref()),
-        Commands::Deploy { file } => commands::deploy(&client, &file).await,
+        Commands::Deploy { file, timeout } => commands::deploy(&client, &file, timeout).await,
         Commands::Status => commands::status(&client).await,
         Commands::Top => commands::top::top(client, &cli.server, cli.token.as_deref()).await,
         Commands::Pods { project } => commands::pods(&client, project.as_deref()).await,
@@ -369,7 +404,13 @@ async fn main() -> anyhow::Result<()> {
         Commands::Stop { name, project } => {
             commands::stop(&client, project.as_deref(), &name).await
         }
-        Commands::Rm { name, project } => {
+        Commands::Rm { name, project, yes } => {
+            if !yes {
+                let prompt = format!("Are you sure you want to remove deployment '{name}'?");
+                if !dialoguer::Confirm::new().with_prompt(prompt).default(false).interact()? {
+                    return Ok(());
+                }
+            }
             commands::remove(&client, project.as_deref(), &name).await
         }
         Commands::Project { command } => match command {
@@ -377,7 +418,15 @@ async fn main() -> anyhow::Result<()> {
             ProjectCommands::Create { name } => commands::create_project(&client, &name).await,
             ProjectCommands::Suspend { name } => commands::suspend_project(&client, &name).await,
             ProjectCommands::Resume { name } => commands::resume_project(&client, &name).await,
-            ProjectCommands::Delete { name } => commands::delete_project(&client, &name).await,
+            ProjectCommands::Delete { name, yes } => {
+                if !yes {
+                    let prompt = format!("Are you sure you want to delete project '{name}' and all its resources?");
+                    if !dialoguer::Confirm::new().with_prompt(prompt).default(false).interact()? {
+                        return Ok(());
+                    }
+                }
+                commands::delete_project(&client, &name).await
+            }
         },
         Commands::Secret { command } => match command {
             SecretCommands::Set {
@@ -446,6 +495,7 @@ async fn main() -> anyhow::Result<()> {
                 commands::setup::cni(&bin_dir, &version).await
             }
         },
+        Commands::Completions { .. } => unreachable!("handled above"),
     };
 
     if let Err(e) = result {
@@ -478,7 +528,10 @@ mod tests {
     fn parse_deploy_command() {
         let cli = Cli::try_parse_from(["nexa", "deploy", "app.yaml"]).unwrap();
         match cli.command {
-            Commands::Deploy { file } => assert_eq!(file, "app.yaml"),
+            Commands::Deploy { file, timeout } => {
+                assert_eq!(file, "app.yaml");
+                assert_eq!(timeout, 60);
+            }
             _ => panic!("expected Deploy command"),
         }
     }

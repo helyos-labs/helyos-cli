@@ -72,7 +72,9 @@ pub async fn handle_key(app: &mut App, key: KeyEvent) -> anyhow::Result<bool> {
                 if app.active_panel == ActivePanel::Pods {
                     if let Some(pod) = app.selected_pod() {
                         let name = pod.container_name();
+                        // Prompt messages are not auto-cleared (no set_status)
                         app.status_message = Some(format!("Delete {name}? [y/N]"));
+                        app.status_message_at = None;
                         app.input_mode = InputMode::ConfirmDelete(name);
                     }
                 }
@@ -82,7 +84,9 @@ pub async fn handle_key(app: &mut App, key: KeyEvent) -> anyhow::Result<bool> {
                 if app.active_panel == ActivePanel::Pods {
                     if let Some(pod) = app.selected_pod() {
                         let deployment = pod.deployment_name.clone();
+                        // Prompt messages are not auto-cleared (no set_status)
                         app.status_message = Some(format!("Scale {deployment} — Replicas: "));
+                        app.status_message_at = None;
                         app.input_mode = InputMode::ScaleInput(deployment, String::new());
                     }
                 }
