@@ -197,8 +197,9 @@ enum SecretCommands {
     Set {
         /// Secret name
         name: String,
-        /// Secret value
-        value: String,
+        /// Secret value (if omitted, reads from stdin or prompts interactively)
+        #[arg(long)]
+        value: Option<String>,
         /// Project name
         #[arg(short, long)]
         project: String,
@@ -367,7 +368,23 @@ async fn main() -> anyhow::Result<()> {
                 name,
                 value,
                 project,
-            } => commands::secret::set(&client, &project, &name, &value).await,
+            } => {
+                let secret_value = match value {
+                    Some(v) => v,
+                    None => {
+                        if atty::is(atty::Stream::Stdin) {
+                            dialoguer::Password::new()
+                                .with_prompt(format!("Value for secret '{name}'"))
+                                .interact()?
+                        } else {
+                            let mut buf = String::new();
+                            std::io::stdin().read_line(&mut buf)?;
+                            buf.trim_end().to_string()
+                        }
+                    }
+                };
+                commands::secret::set(&client, &project, &name, &secret_value).await
+            },
             SecretCommands::List { project } => commands::secret::list(&client, &project).await,
             SecretCommands::Rm { name, project } => {
                 commands::secret::remove(&client, &project, &name).await
@@ -490,7 +507,7 @@ mod tests {
     #[test]
     fn parse_secret_set() {
         let cli =
-            Cli::try_parse_from(["nexa", "secret", "set", "DB_PASS", "s3cret", "-p", "myapp"])
+            Cli::try_parse_from(["nexa", "secret", "set", "DB_PASS", "--value", "s3cret", "-p", "myapp"])
                 .unwrap();
         match cli.command {
             Commands::Secret { command } => match command {
@@ -500,12 +517,12 @@ mod tests {
                     project,
                 } => {
                     assert_eq!(name, "DB_PASS");
-                    assert_eq!(value, "s3cret");
+                    assert_eq!(value, Some("s3cret".to_string()));
                     assert_eq!(project, "myapp");
                 }
-                _ => panic!("expected Secret Set subcommand"),
+                _ => panic!("expected Set"),
             },
-            _ => panic!("expected Secret command"),
+            _ => panic!("expected Secret"),
         }
     }
 
