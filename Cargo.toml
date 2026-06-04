@@ -12,11 +12,11 @@ name = "nexa"
 path = "src/main.rs"
 
 [dependencies]
-nexa-core = { git = "https://github.com/nexa-net/nexa-core", tag = "v0.1.5" }
+nexa-core = { git = "https://github.com/nexa-net/nexa-core", tag = "v0.1.6" }
 tokio = { version = "1.52", features = ["full"] }
 serde = { version = "1.0", features = ["derive"] }
 serde_json = "1.0"
-serde_yml = "0.0.12"
+serde_yaml_ng = "0.10"
 anyhow = "1.0"
 clap = { version = "4.6", features = ["derive", "env"] }
 clap_complete = "4.6"
