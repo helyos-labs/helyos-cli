@@ -11,19 +11,19 @@ use clap_complete::Shell;
 
 #[derive(Parser)]
 #[command(
-    name = "nexa",
-    about = "NexaNet CLI — deploy and manage containers",
+    name = "helyos",
+    about = "Helyos CLI — deploy and manage containers",
     version,
     propagate_version = true
 )]
 struct Cli {
-    /// nexad server URL (or set NEXA_SERVER, or `server` in ~/.nexa/config.toml;
+    /// helyosd server URL (or set HELYOS_SERVER, or `server` in ~/.helyos/config.toml;
     /// defaults to http://localhost:6443)
-    #[arg(long, env = "NEXA_SERVER", global = true)]
+    #[arg(long, env = "HELYOS_SERVER", global = true)]
     server: Option<String>,
 
-    /// API bearer token (or set NEXA_API_TOKEN env var, or `token` in ~/.nexa/config.toml)
-    #[arg(long, env = "NEXA_API_TOKEN", global = true)]
+    /// API bearer token (or set HELYOS_API_TOKEN env var, or `token` in ~/.helyos/config.toml)
+    #[arg(long, env = "HELYOS_API_TOKEN", global = true)]
     token: Option<String>,
 
     /// Output results as JSON
@@ -36,7 +36,7 @@ struct Cli {
 
 #[derive(Subcommand)]
 enum Commands {
-    /// Initialize a new NexaNet project
+    /// Initialize a new Helyos project
     Init {
         /// Project name (interactive if omitted)
         name: Option<String>,
@@ -344,7 +344,7 @@ enum SetupComponent {
     /// Download and install standard CNI plugins
     Cni {
         /// Directory to install CNI plugin binaries
-        #[arg(long, default_value = "/var/lib/nexa/cni/bin")]
+        #[arg(long, default_value = "/var/lib/helyos/cni/bin")]
         bin_dir: String,
 
         /// CNI plugins version to download
@@ -378,7 +378,7 @@ async fn main() -> anyhow::Result<()> {
     // Handle completions before validating server URL (completions don't need a server)
     if let Commands::Completions { shell } = &cli.command {
         let mut cmd = Cli::command();
-        clap_complete::generate(*shell, &mut cmd, "nexa", &mut std::io::stdout());
+        clap_complete::generate(*shell, &mut cmd, "helyos", &mut std::io::stdout());
         return Ok(());
     }
 
@@ -401,7 +401,7 @@ async fn main() -> anyhow::Result<()> {
         eprintln!("  Use --server https://... for production environments.\n");
     }
 
-    let client = client::NexaClient::new(&server, token.as_deref());
+    let client = client::HelyosClient::new(&server, token.as_deref());
 
     let result = match cli.command {
         Commands::Init { name, image } => commands::init(name.as_deref(), image.as_deref()),
@@ -535,8 +535,11 @@ async fn main() -> anyhow::Result<()> {
             .is_some_and(|re| re.is_connect() || re.is_timeout());
         if is_connect_error {
             output::print_error_with_hint(
-                "Cannot connect to nexad",
-                &format!("Is nexad running? Start it with: nexad --host {}", server),
+                "Cannot connect to helyosd",
+                &format!(
+                    "Is helyosd running? Start it with: helyosd --host {}",
+                    server
+                ),
             );
         } else {
             output::print_error(&e.to_string());
@@ -554,7 +557,7 @@ mod tests {
 
     #[test]
     fn parse_deploy_command() {
-        let cli = Cli::try_parse_from(["nexa", "deploy", "app.yaml"]).unwrap();
+        let cli = Cli::try_parse_from(["helyos", "deploy", "app.yaml"]).unwrap();
         match cli.command {
             Commands::Deploy { file, timeout } => {
                 assert_eq!(file, "app.yaml");
@@ -566,7 +569,7 @@ mod tests {
 
     #[test]
     fn parse_scale_command() {
-        let cli = Cli::try_parse_from(["nexa", "scale", "api", "5", "-p", "myapp"]).unwrap();
+        let cli = Cli::try_parse_from(["helyos", "scale", "api", "5", "-p", "myapp"]).unwrap();
         match cli.command {
             Commands::Scale {
                 name,
@@ -583,7 +586,7 @@ mod tests {
 
     #[test]
     fn parse_pods_with_project() {
-        let cli = Cli::try_parse_from(["nexa", "pods", "--project", "web"]).unwrap();
+        let cli = Cli::try_parse_from(["helyos", "pods", "--project", "web"]).unwrap();
         match cli.command {
             Commands::Pods { project } => assert_eq!(project, Some("web".to_string())),
             _ => panic!("expected Pods command"),
@@ -592,21 +595,21 @@ mod tests {
 
     #[test]
     fn parse_json_flag() {
-        let cli = Cli::try_parse_from(["nexa", "--json", "status"]).unwrap();
+        let cli = Cli::try_parse_from(["helyos", "--json", "status"]).unwrap();
         assert!(cli.json);
     }
 
     #[test]
     fn parse_server_flag() {
         let cli =
-            Cli::try_parse_from(["nexa", "--server", "http://10.0.1.1:6443", "status"]).unwrap();
+            Cli::try_parse_from(["helyos", "--server", "http://10.0.1.1:6443", "status"]).unwrap();
         assert_eq!(cli.server.as_deref(), Some("http://10.0.1.1:6443"));
     }
 
     #[test]
     fn parse_secret_set() {
         let cli = Cli::try_parse_from([
-            "nexa", "secret", "set", "DB_PASS", "--value", "s3cret", "-p", "myapp",
+            "helyos", "secret", "set", "DB_PASS", "--value", "s3cret", "-p", "myapp",
         ])
         .unwrap();
         match cli.command {
@@ -629,7 +632,7 @@ mod tests {
     #[test]
     fn parse_route_add() {
         let cli = Cli::try_parse_from([
-            "nexa",
+            "helyos",
             "route",
             "add",
             "api.example.com",

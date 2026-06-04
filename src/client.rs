@@ -22,7 +22,7 @@ fn format_api_error(status: reqwest::StatusCode, body: &str) -> String {
         404 => "Resource not found".to_string(),
         409 => "Resource already exists or conflict".to_string(),
         422 => format!("Invalid request: {body}"),
-        500 => "Internal server error — is nexad healthy?".to_string(),
+        500 => "Internal server error — is helyosd healthy?".to_string(),
         _ => format!("Request failed ({status}): {body}"),
     }
 }
@@ -30,19 +30,19 @@ fn format_api_error(status: reqwest::StatusCode, body: &str) -> String {
 fn error_hint(status: reqwest::StatusCode) -> Option<&'static str> {
     match status.as_u16() {
         401 | 403 => Some("Check your authentication credentials"),
-        404 => Some("Verify the resource name and project with: nexa pods / nexa deployments"),
-        500 => Some("Check nexad logs: journalctl -u nexad -n 50"),
-        502 | 503 => Some("nexad may be starting up. Retry in a few seconds"),
+        404 => Some("Verify the resource name and project with: helyos pods / helyos deployments"),
+        500 => Some("Check helyosd logs: journalctl -u helyosd -n 50"),
+        502 | 503 => Some("helyosd may be starting up. Retry in a few seconds"),
         _ => None,
     }
 }
 
-pub struct NexaClient {
+pub struct HelyosClient {
     base_url: String,
     http: Client,
 }
 
-impl NexaClient {
+impl HelyosClient {
     pub fn new(base_url: &str, token: Option<&str>) -> Self {
         let mut headers = HeaderMap::new();
         if let Some(t) = token {
@@ -196,8 +196,8 @@ impl NexaClient {
         &self,
         project: &str,
         deployment_name: &str,
-    ) -> Result<Vec<nexa_core::domain::models::Pod>> {
-        let pods: Vec<nexa_core::domain::models::Pod> =
+    ) -> Result<Vec<helyos_core::domain::models::Pod>> {
+        let pods: Vec<helyos_core::domain::models::Pod> =
             self.get(&format!("/api/v1/pods?project={project}")).await?;
         Ok(pods
             .into_iter()
@@ -227,7 +227,7 @@ mod tests {
     fn hint_404_mentions_resource_lookup() {
         let h = error_hint(StatusCode::NOT_FOUND).expect("404 should have a hint");
         assert!(
-            h.contains("nexa pods") || h.to_lowercase().contains("resource"),
+            h.contains("helyos pods") || h.to_lowercase().contains("resource"),
             "got: {h}"
         );
     }
@@ -326,13 +326,13 @@ mod tests {
 
     #[test]
     fn base_url_trailing_slashes_trimmed() {
-        let c = NexaClient::new("http://localhost:6443///", None);
+        let c = HelyosClient::new("http://localhost:6443///", None);
         assert_eq!(c.base_url(), "http://localhost:6443");
     }
 
     #[test]
     fn base_url_without_trailing_slash_unchanged() {
-        let c = NexaClient::new("http://10.0.0.1:6443", Some("tok"));
+        let c = HelyosClient::new("http://10.0.0.1:6443", Some("tok"));
         assert_eq!(c.base_url(), "http://10.0.0.1:6443");
     }
 }

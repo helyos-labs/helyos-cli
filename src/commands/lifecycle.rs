@@ -1,9 +1,9 @@
 use anyhow::Result;
 
-use crate::client::NexaClient;
+use crate::client::HelyosClient;
 use crate::output;
 
-pub async fn stop(client: &NexaClient, project: Option<&str>, name: &str) -> Result<()> {
+pub async fn stop(client: &HelyosClient, project: Option<&str>, name: &str) -> Result<()> {
     let project = project.unwrap_or("default");
     let path = format!(
         "/api/v1/projects/{}/deployments/{}/stop",
@@ -25,7 +25,7 @@ pub async fn stop(client: &NexaClient, project: Option<&str>, name: &str) -> Res
     Ok(())
 }
 
-pub async fn remove(client: &NexaClient, project: Option<&str>, name: &str) -> Result<()> {
+pub async fn remove(client: &HelyosClient, project: Option<&str>, name: &str) -> Result<()> {
     let project = project.unwrap_or("default");
     let path = format!(
         "/api/v1/projects/{}/deployments/{}",

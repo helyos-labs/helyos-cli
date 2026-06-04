@@ -4,11 +4,11 @@ use futures::StreamExt;
 use reqwest::Response;
 use tokio::signal;
 
-use crate::client::NexaClient;
+use crate::client::HelyosClient;
 use crate::output;
 
 pub async fn logs(
-    client: &NexaClient,
+    client: &HelyosClient,
     project: Option<&str>,
     name: &str,
     tail: Option<u64>,

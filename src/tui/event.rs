@@ -3,7 +3,7 @@ use std::time::Duration;
 use crossterm::event::{self, Event, KeyEvent};
 use tokio::sync::mpsc;
 
-use crate::client::NexaClient;
+use crate::client::HelyosClient;
 
 pub enum AppEvent {
     Tick,
@@ -19,10 +19,10 @@ impl EventHandler {
     /// Create a new event handler that merges keyboard input, tick events,
     /// and SSE cluster events.
     ///
-    /// The SSE stream reuses the shared `NexaClient` HTTP client (which
+    /// The SSE stream reuses the shared `HelyosClient` HTTP client (which
     /// already has auth headers, timeouts, and connection-pool settings
     /// configured) instead of constructing a separate `reqwest::Client`.
-    pub fn new(tick_rate: Duration, client: &NexaClient) -> Self {
+    pub fn new(tick_rate: Duration, client: &HelyosClient) -> Self {
         let (tx, rx) = mpsc::unbounded_channel();
 
         let key_tx = tx.clone();

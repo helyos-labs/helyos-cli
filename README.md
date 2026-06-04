@@ -3,19 +3,19 @@
 <picture>
   <source media="(prefers-color-scheme: dark)" srcset="assets/white_logo.png" width="200">
   <source media="(prefers-color-scheme: light)" srcset="assets/black_logo.png" width="200">
-  <img alt="NexaNet" src="assets/black_logo.png" width="200">
+  <img alt="Helyos" src="assets/black_logo.png" width="200">
 </picture>
 
-# nexa-cli
+# helyos-cli
 
-**NexaNet CLI -- deploy and manage containers from the terminal**
+**Helyos CLI -- deploy and manage containers from the terminal**
 
-[![CI](https://github.com/nexa-net/nexa-cli/actions/workflows/ci.yml/badge.svg)](https://github.com/nexa-net/nexa-cli/actions/workflows/ci.yml)
+[![CI](https://github.com/helyos-labs/helyos-cli/actions/workflows/ci.yml/badge.svg)](https://github.com/helyos-labs/helyos-cli/actions/workflows/ci.yml)
 [![License](https://img.shields.io/badge/license-Apache--2.0-blue.svg)](LICENSE)
 [![Rust](https://img.shields.io/badge/rust-1.85%2B-orange.svg)](https://www.rust-lang.org)
 
-nexa-cli is the command-line interface for NexaNet. It talks to a running
-[nexad](https://github.com/nexa-net/nexad) instance over HTTP and provides
+helyos-cli is the command-line interface for Helyos. It talks to a running
+[helyosd](https://github.com/helyos-labs/helyosd) instance over HTTP and provides
 a complete set of commands for project management, deployments, scaling,
 secrets, routing, clustering, and node operations.
 
@@ -25,48 +25,48 @@ secrets, routing, clustering, and node operations.
 
 ## Features
 
-- **Interactive project scaffolding** -- `nexa init` generates a deployment YAML with guided prompts
+- **Interactive project scaffolding** -- `helyos init` generates a deployment YAML with guided prompts
 - **Declarative deployments** -- deploy from YAML specs with a single command
 - **Full resource management** -- projects, deployments, pods, secrets, routes, certificates, nodes
 - **Live log streaming** -- tail container logs in real time
 - **Cluster operations** -- initialize clusters, manage join tokens, drain and remove nodes
 - **JSON output mode** -- `--json` flag for scripting and CI/CD pipelines
 - **Styled terminal output** -- colored tables, spinners, and human-friendly time formatting
-- **CNI plugin installer** -- `nexa setup cni` downloads and installs standard CNI binaries
+- **CNI plugin installer** -- `helyos setup cni` downloads and installs standard CNI binaries
 
 ## Installation
 
 ```bash
 # Build from source
-cargo install --git https://github.com/nexa-net/nexa-cli
+cargo install --git https://github.com/helyos-labs/helyos-cli
 
 # Or clone and build
-git clone https://github.com/nexa-net/nexa-cli.git
-cd nexa-cli
+git clone https://github.com/helyos-labs/helyos-cli.git
+cd helyos-cli
 cargo build --release
-# Binary is at ./target/release/nexa
+# Binary is at ./target/release/helyos
 ```
 
 ## Quick Start
 
 ```bash
 # 1. Create a project interactively
-nexa init
+helyos init
 
 # 2. Or create a project and deploy in one step
-nexa init myapp --image nginx:alpine
-nexa deploy myapp.yaml
+helyos init myapp --image nginx:alpine
+helyos deploy myapp.yaml
 
 # 3. Check status
-nexa status
-nexa pods
-nexa deployments
+helyos status
+helyos pods
+helyos deployments
 
 # 4. Scale up
-nexa scale api 5 --project ecommerce
+helyos scale api 5 --project ecommerce
 
 # 5. View logs
-nexa logs api --project ecommerce --tail 100
+helyos logs api --project ecommerce --tail 100
 ```
 
 ## Command Reference
@@ -74,70 +74,70 @@ nexa logs api --project ecommerce --tail 100
 ### Core Workflow
 
 ```
-nexa init [NAME] [--image IMAGE]      Create a new project (interactive if no args)
-nexa deploy <FILE>                    Deploy a service from a YAML spec
-nexa status                           Show cluster overview
-nexa pods [-p PROJECT]                List all pods
-nexa deployments [-p PROJECT]         List all deployments
-nexa logs <NAME> [-p PROJECT] [--tail N]  Stream container logs
-nexa scale <NAME> <REPLICAS> [-p PROJECT] Scale a deployment
-nexa stop <NAME> [-p PROJECT]         Stop a deployment
-nexa rm <NAME> [-p PROJECT]           Remove a deployment
+helyos init [NAME] [--image IMAGE]      Create a new project (interactive if no args)
+helyos deploy <FILE>                    Deploy a service from a YAML spec
+helyos status                           Show cluster overview
+helyos pods [-p PROJECT]                List all pods
+helyos deployments [-p PROJECT]         List all deployments
+helyos logs <NAME> [-p PROJECT] [--tail N]  Stream container logs
+helyos scale <NAME> <REPLICAS> [-p PROJECT] Scale a deployment
+helyos stop <NAME> [-p PROJECT]         Stop a deployment
+helyos rm <NAME> [-p PROJECT]           Remove a deployment
 ```
 
 ### Project Management
 
 ```
-nexa project list                     List all projects
-nexa project create <NAME>            Create a project
-nexa project suspend <NAME>           Suspend a project (stops all deployments)
-nexa project resume <NAME>            Resume a suspended project
-nexa project delete <NAME>            Delete a project and all its resources
+helyos project list                     List all projects
+helyos project create <NAME>            Create a project
+helyos project suspend <NAME>           Suspend a project (stops all deployments)
+helyos project resume <NAME>            Resume a suspended project
+helyos project delete <NAME>            Delete a project and all its resources
 ```
 
 ### Secrets
 
 ```
-nexa secret set <NAME> <VALUE> -p PROJECT    Store an encrypted secret
-nexa secret list -p PROJECT                  List secret names
-nexa secret rm <NAME> -p PROJECT             Delete a secret
+helyos secret set <NAME> <VALUE> -p PROJECT    Store an encrypted secret
+helyos secret list -p PROJECT                  List secret names
+helyos secret rm <NAME> -p PROJECT             Delete a secret
 ```
 
 ### Routing and TLS
 
 ```
-nexa routes [-p PROJECT]              List all routes
-nexa route add <DOMAIN> -p PROJECT --deployment NAME [--https]
+helyos routes [-p PROJECT]              List all routes
+helyos route add <DOMAIN> -p PROJECT --deployment NAME [--https]
                                       Add a route for a domain
-nexa route rm <DOMAIN>                Remove a route
-nexa cert import <DOMAIN> --cert FILE --key FILE
+helyos route rm <DOMAIN>                Remove a route
+helyos cert import <DOMAIN> --cert FILE --key FILE
                                       Import a TLS certificate
 ```
 
 ### Cluster and Nodes
 
 ```
-nexa cluster init                     Initialize the cluster
-nexa cluster token show               Show the join token
-nexa cluster token rotate             Rotate the join token
-nexa cluster config get-scheduler     View scheduler configuration
-nexa cluster config set <KEY> <VALUE> Set scheduler strategy or weights
-nexa nodes                            List cluster nodes
-nexa node drain <NAME>                Drain a node (stop scheduling)
-nexa node rm <NAME>                   Remove a node from the cluster
+helyos cluster init                     Initialize the cluster
+helyos cluster token show               Show the join token
+helyos cluster token rotate             Rotate the join token
+helyos cluster config get-scheduler     View scheduler configuration
+helyos cluster config set <KEY> <VALUE> Set scheduler strategy or weights
+helyos nodes                            List cluster nodes
+helyos node drain <NAME>                Drain a node (stop scheduling)
+helyos node rm <NAME>                   Remove a node from the cluster
 ```
 
 ### System Setup
 
 ```
-nexa setup cni [--bin-dir DIR] [--version VER]
+helyos setup cni [--bin-dir DIR] [--version VER]
                                       Download and install CNI plugins
 ```
 
 ### Global Flags
 
 ```
---server <URL>     nexad server address [default: http://localhost:6443]
+--server <URL>     helyosd server address [default: http://localhost:6443]
 --json             Output results as JSON (for scripting)
 --help             Show help
 --version          Show version
@@ -145,7 +145,7 @@ nexa setup cni [--bin-dir DIR] [--version VER]
 
 ## Deployment Spec Format
 
-`nexa deploy` accepts a YAML file describing the desired state:
+`helyos deploy` accepts a YAML file describing the desired state:
 
 ```yaml
 project: ecommerce
@@ -187,15 +187,15 @@ resources:
 
 ## Configuration
 
-nexa-cli connects to nexad at `http://localhost:6443` by default. Override with:
+helyos-cli connects to helyosd at `http://localhost:6443` by default. Override with:
 
 ```bash
 # Per-command
-nexa --server http://10.0.1.1:6443 status
+helyos --server http://10.0.1.1:6443 status
 
 # Or export the environment variable
-export NEXA_SERVER=http://10.0.1.1:6443
-nexa status
+export HELYOS_SERVER=http://10.0.1.1:6443
+helyos status
 ```
 
 ## Development
@@ -215,9 +215,9 @@ cargo build --release
 
 | Repository | Description |
 |---|---|
-| [nexa-core](https://github.com/nexa-net/nexa-core) | Core domain types, traits, and orchestrator |
-| [nexad](https://github.com/nexa-net/nexad) | Daemon -- container runtime, state, API, clustering |
-| [nexa-proxy](https://github.com/nexa-net/nexa-proxy) | Lightweight reverse proxy with weighted load balancing |
+| [helyos-core](https://github.com/helyos-labs/helyos-core) | Core domain types, traits, and orchestrator |
+| [helyosd](https://github.com/helyos-labs/helyosd) | Daemon -- container runtime, state, API, clustering |
+| [helyos-proxy](https://github.com/helyos-labs/helyos-proxy) | Lightweight reverse proxy with weighted load balancing |
 
 ## License
 

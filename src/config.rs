@@ -1,6 +1,6 @@
-//! Minimal, dependency-free config file support for nexa-cli.
+//! Minimal, dependency-free config file support for helyos-cli.
 //!
-//! Loads `~/.nexa/config.toml` (override path with `NEXA_CONFIG`). The format is
+//! Loads `~/.helyos/config.toml` (override path with `HELYOS_CONFIG`). The format is
 //! a tiny subset of TOML: top-level `key = value` lines, optional double/single
 //! quotes, `#` comments, blank lines, and `[section]` headers (ignored). Only
 //! `server` and `token` are read. An absent or malformed file degrades
@@ -31,14 +31,14 @@ fn home_dir() -> Option<PathBuf> {
     None
 }
 
-/// Path to the config file: `$NEXA_CONFIG` if set, else `~/.nexa/config.toml`.
+/// Path to the config file: `$HELYOS_CONFIG` if set, else `~/.helyos/config.toml`.
 pub fn config_path() -> Option<PathBuf> {
-    if let Some(p) = std::env::var_os("NEXA_CONFIG") {
+    if let Some(p) = std::env::var_os("HELYOS_CONFIG") {
         if !p.is_empty() {
             return Some(PathBuf::from(p));
         }
     }
-    home_dir().map(|h| h.join(".nexa").join("config.toml"))
+    home_dir().map(|h| h.join(".helyos").join("config.toml"))
 }
 
 /// Load config from the default path. Never fails: a missing file yields an

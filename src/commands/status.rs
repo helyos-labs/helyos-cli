@@ -1,11 +1,11 @@
 use anyhow::Result;
-use nexa_core::domain::models::{Deployment, DeploymentStatus, Node, Pod, PodStatus, Project};
+use helyos_core::domain::models::{Deployment, DeploymentStatus, Node, Pod, PodStatus, Project};
 
-use crate::client::NexaClient;
+use crate::client::HelyosClient;
 use crate::output;
 use crate::output::Panel;
 
-pub async fn status(client: &NexaClient) -> Result<()> {
+pub async fn status(client: &HelyosClient) -> Result<()> {
     let projects: Vec<Project> = client.get("/api/v1/projects").await?;
     let deployments: Vec<Deployment> = client.get("/api/v1/deployments").await?;
     let pods: Vec<Pod> = client.get("/api/v1/pods").await?;

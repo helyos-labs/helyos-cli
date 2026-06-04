@@ -1,11 +1,11 @@
 use anyhow::Result;
-use nexa_core::domain::models::Deployment;
+use helyos_core::domain::models::Deployment;
 
-use crate::client::NexaClient;
+use crate::client::HelyosClient;
 use crate::output;
 use crate::output::Panel;
 
-pub async fn deployments(client: &NexaClient, project: Option<&str>) -> Result<()> {
+pub async fn deployments(client: &HelyosClient, project: Option<&str>) -> Result<()> {
     let path = match project {
         Some(p) => format!("/api/v1/deployments?project={}", urlencoding::encode(p)),
         None => "/api/v1/deployments".to_string(),

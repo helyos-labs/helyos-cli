@@ -1,9 +1,9 @@
 use anyhow::Result;
 
-use crate::client::NexaClient;
+use crate::client::HelyosClient;
 use crate::output;
 
-pub async fn init(client: &NexaClient) -> Result<()> {
+pub async fn init(client: &HelyosClient) -> Result<()> {
     let resp: serde_json::Value = client.post_empty_json("/api/v1/cluster/init").await?;
     let token = resp["token"].as_str().unwrap_or("unknown");
 
@@ -16,11 +16,11 @@ pub async fn init(client: &NexaClient) -> Result<()> {
     println!("\nJoin token (save this — it won't be shown again):\n");
     println!("  {token}\n");
     println!("Join workers with:");
-    println!("  nexad --mode worker --join <master-ip>:6444 --token {token}");
+    println!("  helyosd --mode worker --join <master-ip>:6444 --token {token}");
     Ok(())
 }
 
-pub async fn token_show(client: &NexaClient) -> Result<()> {
+pub async fn token_show(client: &HelyosClient) -> Result<()> {
     let resp: serde_json::Value = client.get("/api/v1/cluster/token").await?;
     let token = resp["token"].as_str().unwrap_or("not set");
 
@@ -33,7 +33,7 @@ pub async fn token_show(client: &NexaClient) -> Result<()> {
     Ok(())
 }
 
-pub async fn token_rotate(client: &NexaClient) -> Result<()> {
+pub async fn token_rotate(client: &HelyosClient) -> Result<()> {
     let resp: serde_json::Value = client
         .post_empty_json("/api/v1/cluster/token/rotate")
         .await?;
@@ -49,7 +49,7 @@ pub async fn token_rotate(client: &NexaClient) -> Result<()> {
     Ok(())
 }
 
-pub async fn get_scheduler_config(client: &NexaClient) -> Result<()> {
+pub async fn get_scheduler_config(client: &HelyosClient) -> Result<()> {
     let config: serde_json::Value = client.get("/api/v1/cluster/scheduler").await?;
 
     if output::is_json_mode() {
@@ -72,7 +72,7 @@ pub async fn get_scheduler_config(client: &NexaClient) -> Result<()> {
     Ok(())
 }
 
-pub async fn set_cluster_config(client: &NexaClient, key: &str, value: &str) -> Result<()> {
+pub async fn set_cluster_config(client: &HelyosClient, key: &str, value: &str) -> Result<()> {
     let body = if key == "scheduler" {
         serde_json::json!({ "strategy": value }).to_string()
     } else if let Some(weight_name) = key.strip_prefix("scheduler.weights.") {

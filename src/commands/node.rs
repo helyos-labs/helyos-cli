@@ -1,9 +1,9 @@
 use anyhow::Result;
 
-use crate::client::NexaClient;
+use crate::client::HelyosClient;
 use crate::output;
 
-pub async fn drain(client: &NexaClient, name: &str) -> Result<()> {
+pub async fn drain(client: &HelyosClient, name: &str) -> Result<()> {
     client
         .post_empty(&format!(
             "/api/v1/nodes/{}/drain",
@@ -20,7 +20,7 @@ pub async fn drain(client: &NexaClient, name: &str) -> Result<()> {
     Ok(())
 }
 
-pub async fn remove(client: &NexaClient, name: &str) -> Result<()> {
+pub async fn remove(client: &HelyosClient, name: &str) -> Result<()> {
     client
         .delete(&format!("/api/v1/nodes/{}", urlencoding::encode(name)))
         .await?;

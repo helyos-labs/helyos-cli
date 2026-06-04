@@ -1,9 +1,9 @@
 use anyhow::Result;
 
-use crate::client::NexaClient;
+use crate::client::HelyosClient;
 use crate::output;
 
-pub async fn list(client: &NexaClient, project: Option<&str>) -> Result<()> {
+pub async fn list(client: &HelyosClient, project: Option<&str>) -> Result<()> {
     let path = match project {
         Some(p) => format!("/api/v1/routes?project={}", urlencoding::encode(p)),
         None => "/api/v1/routes".into(),
@@ -41,7 +41,7 @@ pub async fn list(client: &NexaClient, project: Option<&str>) -> Result<()> {
 }
 
 pub async fn add(
-    client: &NexaClient,
+    client: &HelyosClient,
     domain: &str,
     project: &str,
     deployment: &str,
@@ -63,7 +63,7 @@ pub async fn add(
     Ok(())
 }
 
-pub async fn remove(client: &NexaClient, domain: &str) -> Result<()> {
+pub async fn remove(client: &HelyosClient, domain: &str) -> Result<()> {
     client
         .delete(&format!("/api/v1/routes/{}", urlencoding::encode(domain)))
         .await?;
@@ -72,7 +72,7 @@ pub async fn remove(client: &NexaClient, domain: &str) -> Result<()> {
 }
 
 pub async fn import_cert(
-    client: &NexaClient,
+    client: &HelyosClient,
     domain: &str,
     cert_path: &str,
     key_path: &str,
