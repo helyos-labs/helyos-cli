@@ -1,5 +1,6 @@
 mod client;
 mod commands;
+mod config;
 mod output;
 mod tui;
 
@@ -14,10 +15,12 @@ use clap_complete::Shell;
     propagate_version = true
 )]
 struct Cli {
-    #[arg(long, default_value = "http://localhost:6443", global = true)]
-    server: String,
+    /// nexad server URL (or set NEXA_SERVER, or `server` in ~/.nexa/config.toml;
+    /// defaults to http://localhost:6443)
+    #[arg(long, env = "NEXA_SERVER", global = true)]
+    server: Option<String>,
 
-    /// API bearer token (or set NEXA_API_TOKEN env var)
+    /// API bearer token (or set NEXA_API_TOKEN env var, or `token` in ~/.nexa/config.toml)
     #[arg(long, env = "NEXA_API_TOKEN", global = true)]
     token: Option<String>,
 
@@ -359,6 +362,17 @@ async fn main() -> anyhow::Result<()> {
         console::set_colors_enabled_stderr(false);
     }
 
+    // Resolve server/token with precedence: CLI flag > env var > config file > default.
+    // clap has already merged the CLI flag and env var into cli.server / cli.token
+    // (these are None only when neither was provided).
+    let file_cfg = config::load();
+    let server: String = cli
+        .server
+        .clone()
+        .or(file_cfg.server)
+        .unwrap_or_else(|| "http://localhost:6443".to_string());
+    let token: Option<String> = cli.token.clone().or(file_cfg.token);
+
     // Handle completions before validating server URL (completions don't need a server)
     if let Commands::Completions { shell } = &cli.command {
         let mut cmd = Cli::command();
@@ -367,26 +381,31 @@ async fn main() -> anyhow::Result<()> {
     }
 
     // Validate --server URL
-    if reqwest::Url::parse(&cli.server).is_err() {
+    if reqwest::Url::parse(&server).is_err() {
         output::print_error(&format!(
             "Invalid server URL: {}\n  Expected format: http(s)://host:port",
-            cli.server,
+            server,
         ));
         std::process::exit(1);
     }
 
-    if cli.server.starts_with("http://") && cli.server != "http://localhost:6443" && cli.server != "http://127.0.0.1:6443" {
-        eprintln!("Warning: communicating over unencrypted HTTP. Secrets and tokens may be exposed.");
+    if server.starts_with("http://")
+        && server != "http://localhost:6443"
+        && server != "http://127.0.0.1:6443"
+    {
+        eprintln!(
+            "Warning: communicating over unencrypted HTTP. Secrets and tokens may be exposed."
+        );
         eprintln!("  Use --server https://... for production environments.\n");
     }
 
-    let client = client::NexaClient::new(&cli.server, cli.token.as_deref());
+    let client = client::NexaClient::new(&server, token.as_deref());
 
     let result = match cli.command {
         Commands::Init { name, image } => commands::init(name.as_deref(), image.as_deref()),
         Commands::Deploy { file, timeout } => commands::deploy(&client, &file, timeout).await,
         Commands::Status => commands::status(&client).await,
-        Commands::Top => commands::top::top(client, &cli.server, cli.token.as_deref()).await,
+        Commands::Top => commands::top::top(client, &server, token.as_deref()).await,
         Commands::Pods { project } => commands::pods(&client, project.as_deref()).await,
         Commands::Deployments { project } => {
             commands::deployments(&client, project.as_deref()).await
@@ -505,10 +524,7 @@ async fn main() -> anyhow::Result<()> {
         if is_connect_error {
             output::print_error_with_hint(
                 "Cannot connect to nexad",
-                &format!(
-                    "Is nexad running? Start it with: nexad --host {}",
-                    cli.server
-                ),
+                &format!("Is nexad running? Start it with: nexad --host {}", server),
             );
         } else {
             output::print_error(&e.to_string());
@@ -572,7 +588,7 @@ mod tests {
     fn parse_server_flag() {
         let cli =
             Cli::try_parse_from(["nexa", "--server", "http://10.0.1.1:6443", "status"]).unwrap();
-        assert_eq!(cli.server, "http://10.0.1.1:6443");
+        assert_eq!(cli.server.as_deref(), Some("http://10.0.1.1:6443"));
     }
 
     #[test]
