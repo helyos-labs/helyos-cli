@@ -9,7 +9,7 @@ permissions:
 
 env:
   CARGO_TERM_COLOR: always
-  BINARY_NAME: nexa
+  BINARY_NAME: helyos
 
 jobs:
   build:
@@ -74,16 +74,16 @@ jobs:
         with:
           path: .
           format: spdx-json
-          output-file: nexa.sbom.spdx.json
+          output-file: helyos.sbom.spdx.json
       - uses: actions/download-artifact@v4
         with:
           merge-multiple: true
       - name: Generate checksums
-        run: sha256sum *.tar.gz nexa.sbom.spdx.json > sha256sums.txt
+        run: sha256sum *.tar.gz helyos.sbom.spdx.json > sha256sums.txt
       - uses: softprops/action-gh-release@v2
         with:
           files: |
             *.tar.gz
             sha256sums.txt
-            nexa.sbom.spdx.json
+            helyos.sbom.spdx.json
           generate_release_notes: true

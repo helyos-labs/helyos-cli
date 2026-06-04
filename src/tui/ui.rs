@@ -51,7 +51,7 @@ fn draw_status_bar(f: &mut Frame, area: Rect, app: &App) {
 
     let line = Line::from(vec![
         Span::styled(
-            " ⊞ NexaNet ",
+            " ⊞ Helyos ",
             Style::default()
                 .fg(Color::Rgb(88, 166, 255))
                 .add_modifier(Modifier::BOLD),

@@ -1,10 +1,10 @@
 use anyhow::Result;
-use nexa_core::domain::models::Project;
+use helyos_core::domain::models::Project;
 
-use crate::client::NexaClient;
+use crate::client::HelyosClient;
 use crate::output;
 
-pub async fn list_projects(client: &NexaClient) -> Result<()> {
+pub async fn list_projects(client: &HelyosClient) -> Result<()> {
     let projects: Vec<Project> = client.get("/api/v1/projects").await?;
 
     if output::is_json_mode() {
@@ -25,7 +25,7 @@ pub async fn list_projects(client: &NexaClient) -> Result<()> {
     Ok(())
 }
 
-pub async fn create_project(client: &NexaClient, name: &str) -> Result<()> {
+pub async fn create_project(client: &HelyosClient, name: &str) -> Result<()> {
     let body = serde_json::json!({ "name": name }).to_string();
     let project: Project = client.post_json("/api/v1/projects", &body).await?;
 
@@ -39,7 +39,7 @@ pub async fn create_project(client: &NexaClient, name: &str) -> Result<()> {
     Ok(())
 }
 
-pub async fn suspend(client: &NexaClient, name: &str) -> Result<()> {
+pub async fn suspend(client: &HelyosClient, name: &str) -> Result<()> {
     let path = format!("/api/v1/projects/{}/suspend", urlencoding::encode(name));
     client.post_empty(&path).await?;
 
@@ -56,7 +56,7 @@ pub async fn suspend(client: &NexaClient, name: &str) -> Result<()> {
     Ok(())
 }
 
-pub async fn resume(client: &NexaClient, name: &str) -> Result<()> {
+pub async fn resume(client: &HelyosClient, name: &str) -> Result<()> {
     let path = format!("/api/v1/projects/{}/resume", urlencoding::encode(name));
     client.post_empty(&path).await?;
 
@@ -73,7 +73,7 @@ pub async fn resume(client: &NexaClient, name: &str) -> Result<()> {
     Ok(())
 }
 
-pub async fn delete_project(client: &NexaClient, name: &str) -> Result<()> {
+pub async fn delete_project(client: &HelyosClient, name: &str) -> Result<()> {
     let path = format!("/api/v1/projects/{}", urlencoding::encode(name));
     client.delete(&path).await?;
 

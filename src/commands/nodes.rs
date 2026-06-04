@@ -1,11 +1,11 @@
 use anyhow::Result;
-use nexa_core::domain::models::Node;
+use helyos_core::domain::models::Node;
 
-use crate::client::NexaClient;
+use crate::client::HelyosClient;
 use crate::output;
 use crate::output::Panel;
 
-pub async fn nodes(client: &NexaClient) -> Result<()> {
+pub async fn nodes(client: &HelyosClient) -> Result<()> {
     let nodes: Vec<Node> = client.get("/api/v1/nodes").await?;
 
     if output::is_json_mode() {

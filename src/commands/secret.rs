@@ -1,9 +1,9 @@
 use anyhow::Result;
 
-use crate::client::NexaClient;
+use crate::client::HelyosClient;
 use crate::output;
 
-pub async fn set(client: &NexaClient, project: &str, name: &str, value: &str) -> Result<()> {
+pub async fn set(client: &HelyosClient, project: &str, name: &str, value: &str) -> Result<()> {
     let path = format!("/api/v1/projects/{}/secrets", urlencoding::encode(project));
     let body = serde_json::json!({
         "name": name,
@@ -26,7 +26,7 @@ pub async fn set(client: &NexaClient, project: &str, name: &str, value: &str) ->
     Ok(())
 }
 
-pub async fn list(client: &NexaClient, project: &str) -> Result<()> {
+pub async fn list(client: &HelyosClient, project: &str) -> Result<()> {
     let path = format!("/api/v1/projects/{}/secrets", urlencoding::encode(project));
     let secrets: Vec<String> = client.get(&path).await?;
 
@@ -51,7 +51,7 @@ pub async fn list(client: &NexaClient, project: &str) -> Result<()> {
     Ok(())
 }
 
-pub async fn remove(client: &NexaClient, project: &str, name: &str) -> Result<()> {
+pub async fn remove(client: &HelyosClient, project: &str, name: &str) -> Result<()> {
     let path = format!(
         "/api/v1/projects/{}/secrets/{}",
         urlencoding::encode(project),

@@ -13,11 +13,15 @@ use crossterm::terminal::{
 use ratatui::Terminal;
 use ratatui::backend::CrosstermBackend;
 
-use crate::client::NexaClient;
+use crate::client::HelyosClient;
 use app::App;
 use event::EventHandler;
 
-pub async fn run(client: NexaClient, server_url: &str, token: Option<&str>) -> anyhow::Result<()> {
+pub async fn run(
+    client: HelyosClient,
+    server_url: &str,
+    token: Option<&str>,
+) -> anyhow::Result<()> {
     let original_hook = std::panic::take_hook();
     std::panic::set_hook(Box::new(move |info| {
         let _ = disable_raw_mode();
@@ -42,7 +46,7 @@ pub async fn run(client: NexaClient, server_url: &str, token: Option<&str>) -> a
 
 async fn run_app(
     terminal: &mut Terminal<CrosstermBackend<io::Stdout>>,
-    client: NexaClient,
+    client: HelyosClient,
     _server_url: &str,
     _token: Option<&str>,
 ) -> anyhow::Result<()> {

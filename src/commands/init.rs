@@ -6,8 +6,8 @@ use crate::output;
 
 pub fn generate_template(project: &str, deployment: &str, image: &str) -> String {
     format!(
-        r#"# NexaNet deployment spec — {deployment}
-# Docs: https://github.com/nexa-net/nexa
+        r#"# Helyos deployment spec — {deployment}
+# Docs: https://github.com/helyos-labs/helyos
 
 project: {project}
 
@@ -96,7 +96,7 @@ pub fn init(name: Option<&str>, image: Option<&str>) -> Result<()> {
         "  1. Edit {}/app.yaml to customize your deployment",
         project
     );
-    println!("  2. Deploy with: nexa deploy {}/app.yaml", project);
+    println!("  2. Deploy with: helyos deploy {}/app.yaml", project);
     println!();
 
     Ok(())

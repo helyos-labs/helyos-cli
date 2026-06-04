@@ -2,7 +2,7 @@ use std::time::Instant;
 
 use serde::Deserialize;
 
-use crate::client::NexaClient;
+use crate::client::HelyosClient;
 
 #[derive(Debug, Clone, Copy, PartialEq)]
 pub enum ActivePanel {
@@ -43,10 +43,10 @@ pub enum InputMode {
 }
 
 pub struct App {
-    pub client: NexaClient,
+    pub client: HelyosClient,
     pub active_panel: ActivePanel,
-    pub pods: Vec<nexa_core::domain::models::Pod>,
-    pub deployments: Vec<nexa_core::domain::models::Deployment>,
+    pub pods: Vec<helyos_core::domain::models::Pod>,
+    pub deployments: Vec<helyos_core::domain::models::Deployment>,
     pub nodes: Vec<NodeStats>,
     pub events: Vec<ClusterEvent>,
     pub pod_cursor: usize,
@@ -60,7 +60,7 @@ pub struct App {
 }
 
 impl App {
-    pub fn new(client: NexaClient) -> Self {
+    pub fn new(client: HelyosClient) -> Self {
         Self {
             client,
             active_panel: ActivePanel::Pods,
@@ -98,11 +98,11 @@ impl App {
     pub async fn refresh(&mut self) {
         let pods_result = self
             .client
-            .get::<Vec<nexa_core::domain::models::Pod>>("/api/v1/pods")
+            .get::<Vec<helyos_core::domain::models::Pod>>("/api/v1/pods")
             .await;
         let deployments_result = self
             .client
-            .get::<Vec<nexa_core::domain::models::Deployment>>("/api/v1/deployments")
+            .get::<Vec<helyos_core::domain::models::Deployment>>("/api/v1/deployments")
             .await;
         let nodes_result = self
             .client
@@ -179,7 +179,7 @@ impl App {
         };
     }
 
-    pub fn selected_pod(&self) -> Option<&nexa_core::domain::models::Pod> {
+    pub fn selected_pod(&self) -> Option<&helyos_core::domain::models::Pod> {
         self.pods.get(self.pod_cursor)
     }
 
@@ -211,7 +211,7 @@ impl App {
                 let body = serde_json::json!({ "replicas": replicas }).to_string();
                 match self
                     .client
-                    .post_json::<nexa_core::domain::models::Deployment>(&path, &body)
+                    .post_json::<helyos_core::domain::models::Deployment>(&path, &body)
                     .await
                 {
                     Ok(d) => {

@@ -10,7 +10,7 @@ permissions:
 
 env:
   CARGO_TERM_COLOR: always
-  BINARY_NAME: nexa
+  BINARY_NAME: helyos
 
 jobs:
   check-version:

@@ -1,11 +1,11 @@
 use anyhow::Result;
-use nexa_core::domain::models::Deployment;
+use helyos_core::domain::models::Deployment;
 
-use crate::client::NexaClient;
+use crate::client::HelyosClient;
 use crate::output;
 
 pub async fn scale(
-    client: &NexaClient,
+    client: &HelyosClient,
     project: Option<&str>,
     name: &str,
     replicas: u32,

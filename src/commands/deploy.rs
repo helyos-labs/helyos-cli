@@ -1,15 +1,15 @@
 use anyhow::Result;
-use nexa_core::config::parse_deployment_file;
-use nexa_core::domain::models::{Deployment, PodStatus};
+use helyos_core::config::parse_deployment_file;
+use helyos_core::domain::models::{Deployment, PodStatus};
 use std::path::Path;
 use std::time::{Duration, Instant};
 use tokio::time::sleep;
 
-use crate::client::NexaClient;
+use crate::client::HelyosClient;
 use crate::output::deploy::{DeployStep, render_deploy_panel};
 use crate::output::{self, Spinner};
 
-pub async fn deploy(client: &NexaClient, file: &str, timeout_secs: u64) -> Result<()> {
+pub async fn deploy(client: &HelyosClient, file: &str, timeout_secs: u64) -> Result<()> {
     let path = Path::new(file);
     if !path.exists() {
         anyhow::bail!("file not found: {file}");
@@ -19,7 +19,7 @@ pub async fn deploy(client: &NexaClient, file: &str, timeout_secs: u64) -> Resul
     let spec = parse_deployment_file(path).map_err(|e| {
         output::print_error_with_hint(
             &format!("Invalid deployment spec: {e}"),
-            "Run 'nexa init' to generate a valid template",
+            "Run 'helyos init' to generate a valid template",
         );
         e
     })?;
@@ -62,7 +62,7 @@ pub async fn deploy(client: &NexaClient, file: &str, timeout_secs: u64) -> Resul
     loop {
         if start.elapsed() > timeout {
             output::print_warning(&format!(
-                "Timed out waiting for all pods ({timeout_secs}s). Check: nexa pods -p {project}"
+                "Timed out waiting for all pods ({timeout_secs}s). Check: helyos pods -p {project}"
             ));
             anyhow::bail!("timed out waiting for deployment '{name}'");
         }
@@ -114,12 +114,12 @@ fn is_terminal_failure(status: &PodStatus) -> bool {
 }
 
 async fn poll_until_ready(
-    client: &NexaClient,
+    client: &HelyosClient,
     project: &str,
     name: &str,
     replicas: u32,
     timeout_secs: u64,
-) -> Result<Vec<nexa_core::domain::models::Pod>> {
+) -> Result<Vec<helyos_core::domain::models::Pod>> {
     let timeout = Duration::from_secs(timeout_secs);
     let start = Instant::now();
 

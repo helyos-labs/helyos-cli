@@ -34,10 +34,10 @@ pub fn color(name: &str) -> Style {
 
 /// Returns a terminal icon for the given semantic name.
 ///
-/// By default, Unicode characters are used. Set `NEXA_ICONS=nerd` in the
+/// By default, Unicode characters are used. Set `HELYOS_ICONS=nerd` in the
 /// environment to use Nerd Font glyphs instead.
 pub fn icon(name: &str) -> &'static str {
-    let use_nerd = std::env::var("NEXA_ICONS")
+    let use_nerd = std::env::var("HELYOS_ICONS")
         .map(|v| v.to_lowercase() == "nerd")
         .unwrap_or(false);
 
@@ -156,8 +156,8 @@ mod tests {
 
     #[test]
     fn icon_returns_unicode_by_default() {
-        // Ensure NEXA_ICONS is not set to "nerd" for this test
-        unsafe { std::env::remove_var("NEXA_ICONS") };
+        // Ensure HELYOS_ICONS is not set to "nerd" for this test
+        unsafe { std::env::remove_var("HELYOS_ICONS") };
         assert_eq!(icon("pod"), "●");
         assert_eq!(icon("success"), "✓");
         assert_eq!(icon("error"), "✗");
