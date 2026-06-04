@@ -132,7 +132,10 @@ mod tests {
             .filter(|l| !l.trim_start().starts_with('#') && !l.is_empty())
             .collect::<Vec<_>>()
             .join("\n");
-        let value: serde_yml::Value = serde_yml::from_str(&uncommented).unwrap();
-        assert_eq!(value["project"], serde_yml::Value::String("test".into()));
+        let value: serde_yaml_ng::Value = serde_yaml_ng::from_str(&uncommented).unwrap();
+        assert_eq!(
+            value["project"],
+            serde_yaml_ng::Value::String("test".into())
+        );
     }
 }
