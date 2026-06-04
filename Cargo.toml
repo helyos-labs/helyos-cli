@@ -12,7 +12,7 @@ name = "nexa"
 path = "src/main.rs"
 
 [dependencies]
-nexa-core = { git = "https://github.com/nexa-net/nexa-core", tag = "v0.1.4" }
+nexa-core = { git = "https://github.com/nexa-net/nexa-core", tag = "v0.1.5" }
 tokio = { version = "1.52", features = ["full"] }
 serde = { version = "1.0", features = ["derive"] }
 serde_json = "1.0"
@@ -29,7 +29,6 @@ futures = "0.3"
 console = "0.15"
 indicatif = "0.17"
 dialoguer = "0.11"
-atty = "0.2"
 urlencoding = "2.1"
 ratatui = "0.29"
 crossterm = "0.28"

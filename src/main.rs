@@ -4,6 +4,8 @@ mod config;
 mod output;
 mod tui;
 
+use std::io::IsTerminal;
+
 use clap::{CommandFactory, Parser, Subcommand};
 use clap_complete::Shell;
 
@@ -426,7 +428,11 @@ async fn main() -> anyhow::Result<()> {
         Commands::Rm { name, project, yes } => {
             if !yes {
                 let prompt = format!("Are you sure you want to remove deployment '{name}'?");
-                if !dialoguer::Confirm::new().with_prompt(prompt).default(false).interact()? {
+                if !dialoguer::Confirm::new()
+                    .with_prompt(prompt)
+                    .default(false)
+                    .interact()?
+                {
                     return Ok(());
                 }
             }
@@ -439,8 +445,14 @@ async fn main() -> anyhow::Result<()> {
             ProjectCommands::Resume { name } => commands::resume_project(&client, &name).await,
             ProjectCommands::Delete { name, yes } => {
                 if !yes {
-                    let prompt = format!("Are you sure you want to delete project '{name}' and all its resources?");
-                    if !dialoguer::Confirm::new().with_prompt(prompt).default(false).interact()? {
+                    let prompt = format!(
+                        "Are you sure you want to delete project '{name}' and all its resources?"
+                    );
+                    if !dialoguer::Confirm::new()
+                        .with_prompt(prompt)
+                        .default(false)
+                        .interact()?
+                    {
                         return Ok(());
                     }
                 }
@@ -456,7 +468,7 @@ async fn main() -> anyhow::Result<()> {
                 let secret_value = match value {
                     Some(v) => v,
                     None => {
-                        if atty::is(atty::Stream::Stdin) {
+                        if std::io::stdin().is_terminal() {
                             dialoguer::Password::new()
                                 .with_prompt(format!("Value for secret '{name}'"))
                                 .interact()?
@@ -468,7 +480,7 @@ async fn main() -> anyhow::Result<()> {
                     }
                 };
                 commands::secret::set(&client, &project, &name, &secret_value).await
-            },
+            }
             SecretCommands::List { project } => commands::secret::list(&client, &project).await,
             SecretCommands::Rm { name, project } => {
                 commands::secret::remove(&client, &project, &name).await
@@ -593,9 +605,10 @@ mod tests {
 
     #[test]
     fn parse_secret_set() {
-        let cli =
-            Cli::try_parse_from(["nexa", "secret", "set", "DB_PASS", "--value", "s3cret", "-p", "myapp"])
-                .unwrap();
+        let cli = Cli::try_parse_from([
+            "nexa", "secret", "set", "DB_PASS", "--value", "s3cret", "-p", "myapp",
+        ])
+        .unwrap();
         match cli.command {
             Commands::Secret { command } => match command {
                 SecretCommands::Set {

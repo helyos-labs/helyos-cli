@@ -2,7 +2,7 @@ use std::time::Duration;
 
 use anyhow::Result;
 use reqwest::Client;
-use reqwest::header::{HeaderMap, HeaderValue, AUTHORIZATION};
+use reqwest::header::{AUTHORIZATION, HeaderMap, HeaderValue};
 use serde::de::DeserializeOwned;
 
 #[derive(Debug, serde::Deserialize)]
