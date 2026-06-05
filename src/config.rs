@@ -121,20 +121,16 @@ fn parse(contents: &str) -> Config {
 
         match &current {
             None => match key {
-                "current-context" => {
-                    if !value.is_empty() {
-                        cfg.current_context = Some(value);
-                    }
+                "current-context" if !value.is_empty() => {
+                    cfg.current_context = Some(value);
                 }
                 "server" => {
                     legacy.server = value;
                     legacy_seen = true;
                 }
-                "token" => {
-                    if !value.is_empty() {
-                        legacy.token = Some(value);
-                        legacy_seen = true;
-                    }
+                "token" if !value.is_empty() => {
+                    legacy.token = Some(value);
+                    legacy_seen = true;
                 }
                 _ => {}
             },
@@ -207,6 +203,7 @@ impl Config {
     }
 
     /// Insert or replace a context.
+    #[allow(dead_code)] // used by `helyos login` (M4)
     pub fn upsert(&mut self, name: &str, ctx: Context) {
         self.contexts.insert(name.to_string(), ctx);
     }

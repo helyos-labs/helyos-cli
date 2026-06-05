@@ -454,7 +454,7 @@ async fn main() -> anyhow::Result<()> {
         .token
         .clone()
         .or_else(|| active.and_then(|c| c.token.clone()));
-    let _default_project: Option<String> = active.and_then(|c| c.project.clone());
+    let default_project: Option<String> = active.and_then(|c| c.project.clone());
 
     // Handle completions before validating server URL (completions don't need a server)
     if let Commands::Completions { shell } = &cli.command {
@@ -489,24 +489,36 @@ async fn main() -> anyhow::Result<()> {
         Commands::Deploy { file, timeout } => commands::deploy(&client, &file, timeout).await,
         Commands::Status => commands::status(&client).await,
         Commands::Top => commands::top::top(client, &server, token.as_deref()).await,
-        Commands::Pods { project } => commands::pods(&client, project.as_deref()).await,
+        Commands::Pods { project } => {
+            let project = project.or_else(|| default_project.clone());
+            commands::pods(&client, project.as_deref()).await
+        }
         Commands::Deployments { project } => {
+            let project = project.or_else(|| default_project.clone());
             commands::deployments(&client, project.as_deref()).await
         }
         Commands::Logs {
             name,
             project,
             tail,
-        } => commands::logs(&client, project.as_deref(), &name, tail).await,
+        } => {
+            let project = project.or_else(|| default_project.clone());
+            commands::logs(&client, project.as_deref(), &name, tail).await
+        }
         Commands::Scale {
             name,
             replicas,
             project,
-        } => commands::scale(&client, project.as_deref(), &name, replicas).await,
+        } => {
+            let project = project.or_else(|| default_project.clone());
+            commands::scale(&client, project.as_deref(), &name, replicas).await
+        }
         Commands::Stop { name, project } => {
+            let project = project.or_else(|| default_project.clone());
             commands::stop(&client, project.as_deref(), &name).await
         }
         Commands::Rm { name, project, yes } => {
+            let project = project.or_else(|| default_project.clone());
             if !yes {
                 let prompt = format!("Are you sure you want to remove deployment '{name}'?");
                 if !dialoguer::Confirm::new()
@@ -587,7 +599,10 @@ async fn main() -> anyhow::Result<()> {
             NodeCommands::Drain { name } => commands::node::drain(&client, &name).await,
             NodeCommands::Rm { name } => commands::node::remove(&client, &name).await,
         },
-        Commands::Routes { project } => commands::route::list(&client, project.as_deref()).await,
+        Commands::Routes { project } => {
+            let project = project.or_else(|| default_project.clone());
+            commands::route::list(&client, project.as_deref()).await
+        }
         Commands::Route { command } => match command {
             RouteCommands::Add {
                 domain,
