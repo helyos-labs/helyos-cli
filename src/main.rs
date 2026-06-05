@@ -475,6 +475,7 @@ async fn main() -> anyhow::Result<()> {
     if server.starts_with("http://")
         && server != "http://localhost:6443"
         && server != "http://127.0.0.1:6443"
+        && !matches!(cli.command, Commands::Context { .. })
     {
         eprintln!(
             "Warning: communicating over unencrypted HTTP. Secrets and tokens may be exposed."

@@ -143,7 +143,7 @@ fn parse(contents: &str) -> Config {
     }
 
     // Legacy flat file (no [context.*] sections) → synthesize a "default" context.
-    if legacy_seen && !legacy.server.is_empty() && cfg.contexts.is_empty() {
+    if legacy_seen && (!legacy.server.is_empty() || legacy.token.is_some()) && cfg.contexts.is_empty() {
         cfg.contexts.insert("default".to_string(), legacy);
     }
     cfg
