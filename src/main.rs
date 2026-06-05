@@ -30,6 +30,10 @@ struct Cli {
     #[arg(long, global = true)]
     json: bool,
 
+    /// Use a specific context for this command (overrides current-context)
+    #[arg(long, global = true)]
+    context: Option<String>,
+
     #[command(subcommand)]
     command: Commands,
 }
@@ -182,6 +186,12 @@ enum Commands {
     Completions {
         /// Shell to generate completions for
         shell: Shell,
+    },
+
+    /// Manage connection contexts
+    Context {
+        #[command(subcommand)]
+        command: ContextCommands,
     },
 }
 
@@ -353,6 +363,29 @@ enum SetupComponent {
     },
 }
 
+#[derive(Subcommand)]
+enum ContextCommands {
+    /// List contexts
+    #[command(visible_alias = "list")]
+    Ls,
+    /// Switch the active context
+    Use { name: String },
+    /// Show the active context
+    Current,
+    /// Remove a context
+    Rm { name: String },
+    /// Rename a context
+    Rename { old: String, new: String },
+    /// Edit fields of a context
+    Set {
+        name: String,
+        #[arg(long)]
+        server: Option<String>,
+        #[arg(long)]
+        project: Option<String>,
+    },
+}
+
 #[tokio::main]
 async fn main() -> anyhow::Result<()> {
     let cli = Cli::parse();
@@ -368,7 +401,16 @@ async fn main() -> anyhow::Result<()> {
     // clap has already merged the CLI flag and env var into cli.server / cli.token
     // (these are None only when neither was provided).
     let file_cfg = config::load();
-    let active = file_cfg.active();
+    let active: Option<&config::Context> = match &cli.context {
+        Some(name) => match file_cfg.contexts.get(name) {
+            Some(c) => Some(c),
+            None => {
+                output::print_error(&format!("no context named '{name}'"));
+                std::process::exit(1);
+            }
+        },
+        None => file_cfg.active(),
+    };
     let server: String = cli
         .server
         .clone()
@@ -378,6 +420,7 @@ async fn main() -> anyhow::Result<()> {
         .token
         .clone()
         .or_else(|| active.and_then(|c| c.token.clone()));
+    let _default_project: Option<String> = active.and_then(|c| c.project.clone());
 
     // Handle completions before validating server URL (completions don't need a server)
     if let Commands::Completions { shell } = &cli.command {
@@ -531,6 +574,16 @@ async fn main() -> anyhow::Result<()> {
             }
         },
         Commands::Completions { .. } => unreachable!("handled above"),
+        Commands::Context { command } => match command {
+            ContextCommands::Ls => commands::context::list(),
+            ContextCommands::Use { name } => commands::context::use_context(&name),
+            ContextCommands::Current => commands::context::current(),
+            ContextCommands::Rm { name } => commands::context::remove(&name),
+            ContextCommands::Rename { old, new } => commands::context::rename(&old, &new),
+            ContextCommands::Set { name, server, project } => {
+                commands::context::set(&name, server.as_deref(), project.as_deref())
+            }
+        },
     };
 
     if let Err(e) = result {
