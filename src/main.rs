@@ -368,12 +368,16 @@ async fn main() -> anyhow::Result<()> {
     // clap has already merged the CLI flag and env var into cli.server / cli.token
     // (these are None only when neither was provided).
     let file_cfg = config::load();
+    let active = file_cfg.active();
     let server: String = cli
         .server
         .clone()
-        .or(file_cfg.server)
+        .or_else(|| active.map(|c| c.server.clone()))
         .unwrap_or_else(|| "http://localhost:6443".to_string());
-    let token: Option<String> = cli.token.clone().or(file_cfg.token);
+    let token: Option<String> = cli
+        .token
+        .clone()
+        .or_else(|| active.and_then(|c| c.token.clone()));
 
     // Handle completions before validating server URL (completions don't need a server)
     if let Commands::Completions { shell } = &cli.command {

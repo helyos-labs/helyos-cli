@@ -1,23 +1,36 @@
-//! Minimal, dependency-free config file support for helyos-cli.
+//! Config file support for helyos-cli: named, switchable contexts.
 //!
-//! Loads `~/.helyos/config.toml` (override path with `HELYOS_CONFIG`). The format is
-//! a tiny subset of TOML: top-level `key = value` lines, optional double/single
-//! quotes, `#` comments, blank lines, and `[section]` headers (ignored). Only
-//! `server` and `token` are read. An absent or malformed file degrades
-//! gracefully to an empty config rather than aborting the CLI.
+//! Loads/saves `~/.helyos/config.toml` (override path with `HELYOS_CONFIG`).
+//! Format is a tiny TOML subset: top-level `key = value`, `[context.NAME]`
+//! section headers, `#` comments, blank lines. A legacy file with only
+//! top-level `server`/`token` (no `[context.*]` sections) is read as an
+//! implicit context named "default" so existing setups keep working.
 
+use std::collections::BTreeMap;
 use std::path::PathBuf;
 
-/// Values loaded from the config file. Any field may be absent.
-#[derive(Debug, Default, Clone)]
-pub struct FileConfig {
-    pub server: Option<String>,
+/// One named target: where + who + defaults. `server` is required; the rest are
+/// optional. `ca`/`ca_sha256`/`insecure`/`token_name` are populated by
+/// `helyos login` (M4) and are treated as opaque pass-through values here.
+#[derive(Debug, Default, Clone, PartialEq)]
+pub struct Context {
+    pub server: String,
     pub token: Option<String>,
+    pub ca: Option<String>,
+    pub ca_sha256: Option<String>,
+    pub project: Option<String>,
+    pub insecure: bool,
+    pub token_name: Option<String>,
 }
 
-/// Resolve the user's home directory without pulling in the `dirs` crate.
+/// The whole config: a set of named contexts + the active one.
+#[derive(Debug, Default, Clone)]
+pub struct Config {
+    pub current_context: Option<String>,
+    pub contexts: BTreeMap<String, Context>,
+}
+
 fn home_dir() -> Option<PathBuf> {
-    // Unix/macOS: $HOME. Windows: $USERPROFILE.
     if let Some(h) = std::env::var_os("HOME") {
         if !h.is_empty() {
             return Some(PathBuf::from(h));
@@ -42,52 +55,22 @@ pub fn config_path() -> Option<PathBuf> {
 }
 
 /// Load config from the default path. Never fails: a missing file yields an
-/// empty config; an unreadable file yields an empty config plus a stderr warning.
-pub fn load() -> FileConfig {
+/// empty config; an unreadable file yields an empty config plus a warning.
+pub fn load() -> Config {
     let Some(path) = config_path() else {
-        return FileConfig::default();
+        return Config::default();
     };
     match std::fs::read_to_string(&path) {
         Ok(contents) => parse(&contents),
-        Err(e) if e.kind() == std::io::ErrorKind::NotFound => FileConfig::default(),
+        Err(e) if e.kind() == std::io::ErrorKind::NotFound => Config::default(),
         Err(e) => {
-            eprintln!(
-                "Warning: could not read config file {}: {e}",
-                path.display()
-            );
-            FileConfig::default()
+            eprintln!("Warning: could not read config file {}: {e}", path.display());
+            Config::default()
         }
     }
 }
 
-/// Parse the minimal TOML-ish format. Unknown keys and malformed lines are
-/// skipped silently (best-effort), so a partially broken file still yields any
-/// keys it can.
-fn parse(contents: &str) -> FileConfig {
-    let mut cfg = FileConfig::default();
-    for raw in contents.lines() {
-        let line = raw.trim();
-        if line.is_empty() || line.starts_with('#') || line.starts_with('[') {
-            continue;
-        }
-        let Some((key, value)) = line.split_once('=') else {
-            continue;
-        };
-        let key = key.trim();
-        let value = unquote(value.trim());
-        if value.is_empty() {
-            continue;
-        }
-        match key {
-            "server" => cfg.server = Some(value),
-            "token" => cfg.token = Some(value),
-            _ => {}
-        }
-    }
-    cfg
-}
-
-/// Strip surrounding double or single quotes, or any trailing `# comment`.
+/// Strip surrounding double/single quotes, or a trailing ` # comment`.
 fn unquote(s: &str) -> String {
     let s = s.trim();
     if (s.starts_with('"') && s.ends_with('"') && s.len() >= 2)
@@ -95,10 +78,123 @@ fn unquote(s: &str) -> String {
     {
         return s[1..s.len() - 1].to_string();
     }
-    // Unquoted: drop an inline ` # comment` if present.
     match s.split_once(" #") {
         Some((before, _)) => before.trim().to_string(),
         None => s.to_string(),
+    }
+}
+
+/// Parse the TOML-subset: top-level `current-context`, legacy top-level
+/// `server`/`token` (→ a "default" context), and `[context.NAME]` sections.
+fn parse(contents: &str) -> Config {
+    let mut cfg = Config::default();
+    let mut legacy = Context::default();
+    let mut legacy_seen = false;
+    // None = top-level; Some("") = inside an unknown section (ignore); Some(name) = a context.
+    let mut current: Option<String> = None;
+
+    for raw in contents.lines() {
+        let line = raw.trim();
+        if line.is_empty() || line.starts_with('#') {
+            continue;
+        }
+
+        if let Some(section) = line.strip_prefix('[').and_then(|s| s.strip_suffix(']')) {
+            let section = section.trim();
+            if let Some(name) = section.strip_prefix("context.") {
+                let name = unquote(name);
+                if !name.is_empty() {
+                    cfg.contexts.entry(name.clone()).or_default();
+                    current = Some(name);
+                    continue;
+                }
+            }
+            current = Some(String::new()); // unknown section → ignore its keys
+            continue;
+        }
+
+        let Some((key, value)) = line.split_once('=') else {
+            continue;
+        };
+        let key = key.trim();
+        let value = unquote(value.trim());
+
+        match &current {
+            None => match key {
+                "current-context" => {
+                    if !value.is_empty() {
+                        cfg.current_context = Some(value);
+                    }
+                }
+                "server" => {
+                    legacy.server = value;
+                    legacy_seen = true;
+                }
+                "token" => {
+                    if !value.is_empty() {
+                        legacy.token = Some(value);
+                        legacy_seen = true;
+                    }
+                }
+                _ => {}
+            },
+            Some(name) if name.is_empty() => {}
+            Some(name) => {
+                let ctx = cfg.contexts.entry(name.clone()).or_default();
+                apply_key(ctx, key, &value);
+            }
+        }
+    }
+
+    // Legacy flat file (no [context.*] sections) → synthesize a "default" context.
+    if legacy_seen && !legacy.server.is_empty() && cfg.contexts.is_empty() {
+        cfg.contexts.insert("default".to_string(), legacy);
+    }
+    cfg
+}
+
+fn apply_key(ctx: &mut Context, key: &str, value: &str) {
+    if value.is_empty() && key != "insecure" {
+        return;
+    }
+    match key {
+        "server" => ctx.server = value.to_string(),
+        "token" => ctx.token = Some(value.to_string()),
+        "ca" => ctx.ca = Some(value.to_string()),
+        "ca-sha256" => ctx.ca_sha256 = Some(value.to_string()),
+        "project" => ctx.project = Some(value.to_string()),
+        "token-name" => ctx.token_name = Some(value.to_string()),
+        "insecure" => ctx.insecure = value == "true",
+        _ => {}
+    }
+}
+
+impl Config {
+    /// The active context: `current-context` if set & present, else the sole
+    /// context when there is exactly one, else `None`.
+    pub fn active(&self) -> Option<&Context> {
+        if let Some(name) = &self.current_context {
+            if let Some(c) = self.contexts.get(name) {
+                return Some(c);
+            }
+        }
+        if self.contexts.len() == 1 {
+            return self.contexts.values().next();
+        }
+        None
+    }
+
+    /// Name of the active context (same rules as [`active`]).
+    pub fn active_name(&self) -> Option<String> {
+        if let Some(name) = &self.current_context {
+            if self.contexts.contains_key(name) {
+                return Some(name.clone());
+            }
+        }
+        if self.contexts.len() == 1 {
+            return self.contexts.keys().next().cloned();
+        }
+        None
     }
 }
 
@@ -107,35 +203,50 @@ mod tests {
     use super::*;
 
     #[test]
-    fn parses_quoted_and_unquoted() {
-        let c = parse("server = \"http://h:6443\"\ntoken = abc123\n");
-        assert_eq!(c.server.as_deref(), Some("http://h:6443"));
-        assert_eq!(c.token.as_deref(), Some("abc123"));
+    fn parses_named_contexts_and_current() {
+        let c = parse(
+            "current-context = \"prod\"\n\n[context.local]\nserver = \"http://localhost:6443\"\ntoken = abc\nproject = default\n\n[context.prod]\nserver = \"https://h:6443\"\ninsecure = true\n",
+        );
+        assert_eq!(c.current_context.as_deref(), Some("prod"));
+        assert_eq!(c.contexts.len(), 2);
+        let local = &c.contexts["local"];
+        assert_eq!(local.server, "http://localhost:6443");
+        assert_eq!(local.token.as_deref(), Some("abc"));
+        assert_eq!(local.project.as_deref(), Some("default"));
+        assert!(c.contexts["prod"].insecure);
     }
 
     #[test]
-    fn ignores_comments_blanks_sections_and_unknown_keys() {
-        let c = parse("# comment\n\n[default]\nserver = http://x:1 # inline\nfoo = bar\n");
-        assert_eq!(c.server.as_deref(), Some("http://x:1"));
-        assert_eq!(c.token, None);
+    fn legacy_flat_file_becomes_default_context() {
+        let c = parse("server = http://localhost:6443\ntoken = sekret\n");
+        assert_eq!(c.contexts.len(), 1);
+        let d = &c.contexts["default"];
+        assert_eq!(d.server, "http://localhost:6443");
+        assert_eq!(d.token.as_deref(), Some("sekret"));
     }
 
     #[test]
-    fn single_quoted_value() {
-        let c = parse("token = 'sekret'\n");
-        assert_eq!(c.token.as_deref(), Some("sekret"));
+    fn active_prefers_current_then_single() {
+        let two = parse("[context.a]\nserver = http://a\n[context.b]\nserver = http://b\n");
+        assert!(two.active().is_none(), "ambiguous with 2 contexts and no current-context");
+        let cur = parse("current-context = a\n[context.a]\nserver = http://a\n[context.b]\nserver = http://b\n");
+        assert_eq!(cur.active().unwrap().server, "http://a");
+        let one = parse("[context.only]\nserver = http://only\n");
+        assert_eq!(one.active().unwrap().server, "http://only");
+        assert_eq!(one.active_name().as_deref(), Some("only"));
     }
 
     #[test]
-    fn malformed_lines_are_skipped() {
-        let c = parse("this is not valid\ntoken=\nserver = ok\n");
-        assert_eq!(c.server.as_deref(), Some("ok"));
-        assert_eq!(c.token, None); // empty value skipped
+    fn unknown_sections_and_keys_ignored() {
+        let c = parse("[weird]\nfoo = bar\n[context.x]\nserver = http://x\nbogus = 1\n");
+        assert_eq!(c.contexts.len(), 1);
+        assert_eq!(c.contexts["x"].server, "http://x");
     }
 
     #[test]
-    fn empty_input_yields_default() {
+    fn empty_input_is_empty_config() {
         let c = parse("");
-        assert!(c.server.is_none() && c.token.is_none());
+        assert!(c.contexts.is_empty() && c.current_context.is_none());
+        assert!(c.active().is_none());
     }
 }
