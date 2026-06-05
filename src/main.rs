@@ -30,6 +30,10 @@ struct Cli {
     #[arg(long, global = true)]
     json: bool,
 
+    /// Use a specific context for this command (overrides current-context)
+    #[arg(long, global = true)]
+    context: Option<String>,
+
     #[command(subcommand)]
     command: Commands,
 }
@@ -183,6 +187,21 @@ enum Commands {
         /// Shell to generate completions for
         shell: Shell,
     },
+
+    /// Manage connection contexts
+    Context {
+        #[command(subcommand)]
+        command: ContextCommands,
+    },
+
+    /// Manage API tokens (server-side)
+    Auth {
+        #[command(subcommand)]
+        command: AuthCommands,
+    },
+
+    /// Show the identity of the active token
+    Whoami,
 }
 
 #[derive(Subcommand)]
@@ -353,6 +372,54 @@ enum SetupComponent {
     },
 }
 
+#[derive(Subcommand)]
+enum ContextCommands {
+    /// List contexts
+    #[command(visible_alias = "list")]
+    Ls,
+    /// Switch the active context
+    Use { name: String },
+    /// Show the active context
+    Current,
+    /// Remove a context
+    Rm { name: String },
+    /// Rename a context
+    Rename { old: String, new: String },
+    /// Edit fields of a context
+    Set {
+        name: String,
+        #[arg(long)]
+        server: Option<String>,
+        #[arg(long)]
+        project: Option<String>,
+    },
+}
+
+#[derive(Subcommand)]
+enum AuthCommands {
+    /// Manage API tokens
+    Token {
+        #[command(subcommand)]
+        command: AuthTokenCommands,
+    },
+}
+
+#[derive(Subcommand)]
+enum AuthTokenCommands {
+    /// Create a named API token (secret shown once)
+    Create {
+        name: String,
+        /// Time-to-live in seconds (default: no expiry)
+        #[arg(long)]
+        ttl: Option<i64>,
+    },
+    /// List API tokens
+    #[command(visible_alias = "list")]
+    Ls,
+    /// Revoke an API token by name
+    Revoke { name: String },
+}
+
 #[tokio::main]
 async fn main() -> anyhow::Result<()> {
     let cli = Cli::parse();
@@ -368,12 +435,26 @@ async fn main() -> anyhow::Result<()> {
     // clap has already merged the CLI flag and env var into cli.server / cli.token
     // (these are None only when neither was provided).
     let file_cfg = config::load();
+    let active: Option<&config::Context> = match &cli.context {
+        Some(name) => match file_cfg.contexts.get(name) {
+            Some(c) => Some(c),
+            None => {
+                output::print_error(&format!("no context named '{name}'"));
+                std::process::exit(1);
+            }
+        },
+        None => file_cfg.active(),
+    };
     let server: String = cli
         .server
         .clone()
-        .or(file_cfg.server)
+        .or_else(|| active.map(|c| c.server.clone()).filter(|s| !s.is_empty()))
         .unwrap_or_else(|| "http://localhost:6443".to_string());
-    let token: Option<String> = cli.token.clone().or(file_cfg.token);
+    let token: Option<String> = cli
+        .token
+        .clone()
+        .or_else(|| active.and_then(|c| c.token.clone()));
+    let default_project: Option<String> = active.and_then(|c| c.project.clone());
 
     // Handle completions before validating server URL (completions don't need a server)
     if let Commands::Completions { shell } = &cli.command {
@@ -394,6 +475,7 @@ async fn main() -> anyhow::Result<()> {
     if server.starts_with("http://")
         && server != "http://localhost:6443"
         && server != "http://127.0.0.1:6443"
+        && !matches!(cli.command, Commands::Context { .. })
     {
         eprintln!(
             "Warning: communicating over unencrypted HTTP. Secrets and tokens may be exposed."
@@ -408,24 +490,36 @@ async fn main() -> anyhow::Result<()> {
         Commands::Deploy { file, timeout } => commands::deploy(&client, &file, timeout).await,
         Commands::Status => commands::status(&client).await,
         Commands::Top => commands::top::top(client, &server, token.as_deref()).await,
-        Commands::Pods { project } => commands::pods(&client, project.as_deref()).await,
+        Commands::Pods { project } => {
+            let project = project.or_else(|| default_project.clone());
+            commands::pods(&client, project.as_deref()).await
+        }
         Commands::Deployments { project } => {
+            let project = project.or_else(|| default_project.clone());
             commands::deployments(&client, project.as_deref()).await
         }
         Commands::Logs {
             name,
             project,
             tail,
-        } => commands::logs(&client, project.as_deref(), &name, tail).await,
+        } => {
+            let project = project.or_else(|| default_project.clone());
+            commands::logs(&client, project.as_deref(), &name, tail).await
+        }
         Commands::Scale {
             name,
             replicas,
             project,
-        } => commands::scale(&client, project.as_deref(), &name, replicas).await,
+        } => {
+            let project = project.or_else(|| default_project.clone());
+            commands::scale(&client, project.as_deref(), &name, replicas).await
+        }
         Commands::Stop { name, project } => {
+            let project = project.or_else(|| default_project.clone());
             commands::stop(&client, project.as_deref(), &name).await
         }
         Commands::Rm { name, project, yes } => {
+            let project = project.or_else(|| default_project.clone());
             if !yes {
                 let prompt = format!("Are you sure you want to remove deployment '{name}'?");
                 if !dialoguer::Confirm::new()
@@ -506,7 +600,10 @@ async fn main() -> anyhow::Result<()> {
             NodeCommands::Drain { name } => commands::node::drain(&client, &name).await,
             NodeCommands::Rm { name } => commands::node::remove(&client, &name).await,
         },
-        Commands::Routes { project } => commands::route::list(&client, project.as_deref()).await,
+        Commands::Routes { project } => {
+            let project = project.or_else(|| default_project.clone());
+            commands::route::list(&client, project.as_deref()).await
+        }
         Commands::Route { command } => match command {
             RouteCommands::Add {
                 domain,
@@ -527,6 +624,28 @@ async fn main() -> anyhow::Result<()> {
             }
         },
         Commands::Completions { .. } => unreachable!("handled above"),
+        Commands::Context { command } => match command {
+            ContextCommands::Ls => commands::context::list(),
+            ContextCommands::Use { name } => commands::context::use_context(&name),
+            ContextCommands::Current => commands::context::current(),
+            ContextCommands::Rm { name } => commands::context::remove(&name),
+            ContextCommands::Rename { old, new } => commands::context::rename(&old, &new),
+            ContextCommands::Set { name, server, project } => {
+                commands::context::set(&name, server.as_deref(), project.as_deref())
+            }
+        },
+        Commands::Auth { command } => match command {
+            AuthCommands::Token { command } => match command {
+                AuthTokenCommands::Create { name, ttl } => {
+                    commands::auth::token_create(&client, &name, ttl).await
+                }
+                AuthTokenCommands::Ls => commands::auth::token_list(&client).await,
+                AuthTokenCommands::Revoke { name } => {
+                    commands::auth::token_revoke(&client, &name).await
+                }
+            },
+        },
+        Commands::Whoami => commands::auth::whoami(&client).await,
     };
 
     if let Err(e) = result {
@@ -660,5 +779,41 @@ mod tests {
             },
             _ => panic!("expected Route command"),
         }
+    }
+
+    #[test]
+    fn parse_context_use() {
+        let cli = Cli::try_parse_from(["helyos", "context", "use", "prod"]).unwrap();
+        match cli.command {
+            Commands::Context { command } => match command {
+                ContextCommands::Use { name } => assert_eq!(name, "prod"),
+                _ => panic!("expected Use"),
+            },
+            _ => panic!("expected Context"),
+        }
+    }
+
+    #[test]
+    fn parse_auth_token_create_with_ttl() {
+        let cli = Cli::try_parse_from(["helyos", "auth", "token", "create", "ci", "--ttl", "3600"]).unwrap();
+        match cli.command {
+            Commands::Auth { command } => match command {
+                AuthCommands::Token { command } => match command {
+                    AuthTokenCommands::Create { name, ttl } => {
+                        assert_eq!(name, "ci");
+                        assert_eq!(ttl, Some(3600));
+                    }
+                    _ => panic!("expected Create"),
+                },
+            },
+            _ => panic!("expected Auth"),
+        }
+    }
+
+    #[test]
+    fn parse_global_context_flag() {
+        let cli = Cli::try_parse_from(["helyos", "--context", "staging", "whoami"]).unwrap();
+        assert_eq!(cli.context.as_deref(), Some("staging"));
+        assert!(matches!(cli.command, Commands::Whoami));
     }
 }
