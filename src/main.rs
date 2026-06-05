@@ -372,7 +372,7 @@ async fn main() -> anyhow::Result<()> {
     let server: String = cli
         .server
         .clone()
-        .or_else(|| active.map(|c| c.server.clone()))
+        .or_else(|| active.map(|c| c.server.clone()).filter(|s| !s.is_empty()))
         .unwrap_or_else(|| "http://localhost:6443".to_string());
     let token: Option<String> = cli
         .token
