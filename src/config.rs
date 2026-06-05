@@ -196,6 +196,122 @@ impl Config {
         }
         None
     }
+
+    /// Set the active context. Errors if `name` is unknown.
+    pub fn set_current(&mut self, name: &str) -> anyhow::Result<()> {
+        if !self.contexts.contains_key(name) {
+            anyhow::bail!("no context named '{name}'");
+        }
+        self.current_context = Some(name.to_string());
+        Ok(())
+    }
+
+    /// Insert or replace a context.
+    pub fn upsert(&mut self, name: &str, ctx: Context) {
+        self.contexts.insert(name.to_string(), ctx);
+    }
+
+    /// Remove a context. Clears `current-context` if it pointed there.
+    pub fn remove(&mut self, name: &str) -> anyhow::Result<()> {
+        if self.contexts.remove(name).is_none() {
+            anyhow::bail!("no context named '{name}'");
+        }
+        if self.current_context.as_deref() == Some(name) {
+            self.current_context = None;
+        }
+        Ok(())
+    }
+
+    /// Rename a context (and follow `current-context`). Errors if `new` exists
+    /// or `old` is unknown.
+    pub fn rename(&mut self, old: &str, new: &str) -> anyhow::Result<()> {
+        if self.contexts.contains_key(new) {
+            anyhow::bail!("context '{new}' already exists");
+        }
+        let ctx = self
+            .contexts
+            .remove(old)
+            .ok_or_else(|| anyhow::anyhow!("no context named '{old}'"))?;
+        self.contexts.insert(new.to_string(), ctx);
+        if self.current_context.as_deref() == Some(old) {
+            self.current_context = Some(new.to_string());
+        }
+        Ok(())
+    }
+
+    /// Render the config to the TOML-subset text (known keys only).
+    pub fn serialize(&self) -> String {
+        let mut out =
+            String::from("# Managed by `helyos`. Edit with `helyos context` / `helyos login`.\n");
+        if let Some(cc) = &self.current_context {
+            out.push_str(&format!("current-context = {}\n", quote(cc)));
+        }
+        for (name, c) in &self.contexts {
+            out.push_str(&format!("\n[context.{name}]\n"));
+            out.push_str(&format!("server = {}\n", quote(&c.server)));
+            if let Some(t) = &c.token {
+                out.push_str(&format!("token = {}\n", quote(t)));
+            }
+            if let Some(p) = &c.project {
+                out.push_str(&format!("project = {}\n", quote(p)));
+            }
+            if let Some(tn) = &c.token_name {
+                out.push_str(&format!("token-name = {}\n", quote(tn)));
+            }
+            if c.insecure {
+                out.push_str("insecure = true\n");
+            }
+            if let Some(ca) = &c.ca {
+                out.push_str(&format!("ca = {}\n", quote(ca)));
+            }
+            if let Some(s) = &c.ca_sha256 {
+                out.push_str(&format!("ca-sha256 = {}\n", quote(s)));
+            }
+        }
+        out
+    }
+
+    /// Save to the default config path (`config_path()`).
+    pub fn save(&self) -> anyhow::Result<()> {
+        let path = config_path().ok_or_else(|| anyhow::anyhow!("could not determine config path"))?;
+        self.save_to(&path)
+    }
+
+    /// Save to a specific path: back up any existing file to `*.toml.bak`, then
+    /// write atomically (temp file in the same dir + rename) with `0600` perms.
+    pub fn save_to(&self, path: &std::path::Path) -> anyhow::Result<()> {
+        if let Some(parent) = path.parent() {
+            if !parent.as_os_str().is_empty() {
+                std::fs::create_dir_all(parent)?;
+            }
+        }
+        if path.exists() {
+            let _ = std::fs::copy(path, path.with_extension("toml.bak"));
+        }
+        let tmp = path.with_extension("toml.tmp");
+        std::fs::write(&tmp, self.serialize().as_bytes())?;
+        set_owner_only(&tmp)?;
+        std::fs::rename(&tmp, path)?;
+        Ok(())
+    }
+}
+
+/// Quote a value for the TOML-subset. Config values (URLs, tokens, base64,
+/// project names) never contain `"`; we wrap in double quotes without escaping
+/// to match the simple `unquote` reader.
+fn quote(s: &str) -> String {
+    format!("\"{s}\"")
+}
+
+#[cfg(unix)]
+fn set_owner_only(path: &std::path::Path) -> std::io::Result<()> {
+    use std::os::unix::fs::PermissionsExt;
+    std::fs::set_permissions(path, std::fs::Permissions::from_mode(0o600))
+}
+
+#[cfg(not(unix))]
+fn set_owner_only(_path: &std::path::Path) -> std::io::Result<()> {
+    Ok(())
 }
 
 #[cfg(test)]
@@ -248,5 +364,68 @@ mod tests {
         let c = parse("");
         assert!(c.contexts.is_empty() && c.current_context.is_none());
         assert!(c.active().is_none());
+    }
+
+    #[test]
+    fn serialize_then_parse_roundtrips() {
+        let mut cfg = Config::default();
+        cfg.contexts.insert(
+            "prod".into(),
+            Context {
+                server: "https://h:6443".into(),
+                token: Some("nxa-api_abc".into()),
+                project: Some("web".into()),
+                insecure: true,
+                token_name: Some("alice".into()),
+                ca: Some("BASE64CA".into()),
+                ca_sha256: Some("9f:86".into()),
+            },
+        );
+        cfg.current_context = Some("prod".into());
+
+        let round = parse(&cfg.serialize());
+        assert_eq!(round.current_context.as_deref(), Some("prod"));
+        assert_eq!(round.contexts["prod"], cfg.contexts["prod"]);
+    }
+
+    #[test]
+    fn save_to_writes_file_and_backup() {
+        let dir = tempfile::tempdir().unwrap();
+        let path = dir.path().join("config.toml");
+        std::fs::write(&path, "current-context = \"old\"\n[context.old]\nserver = http://old\n").unwrap();
+
+        let mut cfg = Config::default();
+        cfg.contexts.insert("new".into(), Context { server: "http://new".into(), ..Default::default() });
+        cfg.current_context = Some("new".into());
+        cfg.save_to(&path).unwrap();
+
+        let reloaded = parse(&std::fs::read_to_string(&path).unwrap());
+        assert_eq!(reloaded.current_context.as_deref(), Some("new"));
+        assert!(reloaded.contexts.contains_key("new"));
+        let bak = std::fs::read_to_string(path.with_extension("toml.bak")).unwrap();
+        assert!(bak.contains("context.old"), "backup must retain the prior file");
+    }
+
+    #[cfg(unix)]
+    #[test]
+    fn save_to_sets_owner_only_perms() {
+        use std::os::unix::fs::PermissionsExt;
+        let dir = tempfile::tempdir().unwrap();
+        let path = dir.path().join("config.toml");
+        Config::default().save_to(&path).unwrap();
+        let mode = std::fs::metadata(&path).unwrap().permissions().mode();
+        assert_eq!(mode & 0o777, 0o600);
+    }
+
+    #[test]
+    fn mutators_set_current_remove_rename() {
+        let mut cfg = parse("[context.a]\nserver = http://a\n[context.b]\nserver = http://b\n");
+        assert!(cfg.set_current("a").is_ok());
+        assert!(cfg.set_current("missing").is_err());
+        cfg.rename("a", "a2").unwrap();
+        assert_eq!(cfg.current_context.as_deref(), Some("a2"));
+        cfg.remove("a2").unwrap();
+        assert!(cfg.current_context.is_none(), "removing the active context clears current");
+        assert!(cfg.remove("a2").is_err());
     }
 }
