@@ -193,6 +193,15 @@ enum Commands {
         #[command(subcommand)]
         command: ContextCommands,
     },
+
+    /// Manage API tokens (server-side)
+    Auth {
+        #[command(subcommand)]
+        command: AuthCommands,
+    },
+
+    /// Show the identity of the active token
+    Whoami,
 }
 
 #[derive(Subcommand)]
@@ -384,6 +393,31 @@ enum ContextCommands {
         #[arg(long)]
         project: Option<String>,
     },
+}
+
+#[derive(Subcommand)]
+enum AuthCommands {
+    /// Manage API tokens
+    Token {
+        #[command(subcommand)]
+        command: AuthTokenCommands,
+    },
+}
+
+#[derive(Subcommand)]
+enum AuthTokenCommands {
+    /// Create a named API token (secret shown once)
+    Create {
+        name: String,
+        /// Time-to-live in seconds (default: no expiry)
+        #[arg(long)]
+        ttl: Option<i64>,
+    },
+    /// List API tokens
+    #[command(visible_alias = "list")]
+    Ls,
+    /// Revoke an API token by name
+    Revoke { name: String },
 }
 
 #[tokio::main]
@@ -584,6 +618,18 @@ async fn main() -> anyhow::Result<()> {
                 commands::context::set(&name, server.as_deref(), project.as_deref())
             }
         },
+        Commands::Auth { command } => match command {
+            AuthCommands::Token { command } => match command {
+                AuthTokenCommands::Create { name, ttl } => {
+                    commands::auth::token_create(&client, &name, ttl).await
+                }
+                AuthTokenCommands::Ls => commands::auth::token_list(&client).await,
+                AuthTokenCommands::Revoke { name } => {
+                    commands::auth::token_revoke(&client, &name).await
+                }
+            },
+        },
+        Commands::Whoami => commands::auth::whoami(&client).await,
     };
 
     if let Err(e) = result {
@@ -717,5 +763,41 @@ mod tests {
             },
             _ => panic!("expected Route command"),
         }
+    }
+
+    #[test]
+    fn parse_context_use() {
+        let cli = Cli::try_parse_from(["helyos", "context", "use", "prod"]).unwrap();
+        match cli.command {
+            Commands::Context { command } => match command {
+                ContextCommands::Use { name } => assert_eq!(name, "prod"),
+                _ => panic!("expected Use"),
+            },
+            _ => panic!("expected Context"),
+        }
+    }
+
+    #[test]
+    fn parse_auth_token_create_with_ttl() {
+        let cli = Cli::try_parse_from(["helyos", "auth", "token", "create", "ci", "--ttl", "3600"]).unwrap();
+        match cli.command {
+            Commands::Auth { command } => match command {
+                AuthCommands::Token { command } => match command {
+                    AuthTokenCommands::Create { name, ttl } => {
+                        assert_eq!(name, "ci");
+                        assert_eq!(ttl, Some(3600));
+                    }
+                    _ => panic!("expected Create"),
+                },
+            },
+            _ => panic!("expected Auth"),
+        }
+    }
+
+    #[test]
+    fn parse_global_context_flag() {
+        let cli = Cli::try_parse_from(["helyos", "--context", "staging", "whoami"]).unwrap();
+        assert_eq!(cli.context.as_deref(), Some("staging"));
+        assert!(matches!(cli.command, Commands::Whoami));
     }
 }

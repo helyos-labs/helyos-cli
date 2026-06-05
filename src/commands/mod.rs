@@ -1,3 +1,4 @@
+pub mod auth;
 pub mod cluster;
 pub mod context;
 pub mod deploy;
