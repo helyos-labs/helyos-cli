@@ -217,7 +217,13 @@ fn derive_name(server: &str) -> String {
         .unwrap_or("");
     let cleaned: String = host
         .chars()
-        .map(|c| if c.is_ascii_alphanumeric() || c == '-' { c } else { '-' })
+        .map(|c| {
+            if c.is_ascii_alphanumeric() || c == '-' {
+                c
+            } else {
+                '-'
+            }
+        })
         .collect();
     let cleaned = cleaned.trim_matches('-').to_string();
     if cleaned.is_empty() {
@@ -250,7 +256,10 @@ mod tests {
         assert_eq!(normalize_server("h.example"), "https://h.example:6443");
         assert_eq!(normalize_server("h.example:7000"), "https://h.example:7000");
         assert_eq!(normalize_server("https://h:6443"), "https://h:6443");
-        assert_eq!(normalize_server("http://localhost:6443"), "http://localhost:6443");
+        assert_eq!(
+            normalize_server("http://localhost:6443"),
+            "http://localhost:6443"
+        );
     }
 
     #[test]
@@ -262,7 +271,10 @@ mod tests {
 
     #[test]
     fn derive_name_sanitizes_host() {
-        assert_eq!(derive_name("https://helyos.acme.internal:6443"), "helyos-acme-internal");
+        assert_eq!(
+            derive_name("https://helyos.acme.internal:6443"),
+            "helyos-acme-internal"
+        );
         assert_eq!(derive_name("https://10.0.0.5:6443"), "10-0-0-5");
     }
 
@@ -270,7 +282,9 @@ mod tests {
     fn unique_name_suffixes_on_collision() {
         let cfg = config::Config {
             current_context: None,
-            contexts: [("acme".to_string(), config::Context::default())].into_iter().collect(),
+            contexts: [("acme".to_string(), config::Context::default())]
+                .into_iter()
+                .collect(),
         };
         assert_eq!(unique_context_name(&cfg, "acme"), "acme-2");
         assert_eq!(unique_context_name(&cfg, "fresh"), "fresh");

@@ -53,7 +53,11 @@ pub fn list() -> Result<()> {
         .iter()
         .map(|(n, c)| {
             vec![
-                if Some(n.as_str()) == active.as_deref() { "*".into() } else { " ".into() },
+                if Some(n.as_str()) == active.as_deref() {
+                    "*".into()
+                } else {
+                    " ".into()
+                },
                 n.clone(),
                 c.server.clone(),
                 c.project.clone().unwrap_or_else(|| "-".into()),

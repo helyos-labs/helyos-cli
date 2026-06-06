@@ -711,9 +711,11 @@ async fn main() -> anyhow::Result<()> {
             ContextCommands::Current => commands::context::current(),
             ContextCommands::Rm { name } => commands::context::remove(&name),
             ContextCommands::Rename { old, new } => commands::context::rename(&old, &new),
-            ContextCommands::Set { name, server, project } => {
-                commands::context::set(&name, server.as_deref(), project.as_deref())
-            }
+            ContextCommands::Set {
+                name,
+                server,
+                project,
+            } => commands::context::set(&name, server.as_deref(), project.as_deref()),
         },
         Commands::Auth { command } => match command {
             AuthCommands::Token { command } => match command {
@@ -879,7 +881,8 @@ mod tests {
 
     #[test]
     fn parse_auth_token_create_with_ttl() {
-        let cli = Cli::try_parse_from(["helyos", "auth", "token", "create", "ci", "--ttl", "3600"]).unwrap();
+        let cli = Cli::try_parse_from(["helyos", "auth", "token", "create", "ci", "--ttl", "3600"])
+            .unwrap();
         match cli.command {
             Commands::Auth { command } => match command {
                 AuthCommands::Token { command } => match command {
@@ -904,10 +907,22 @@ mod tests {
     #[test]
     fn parse_login_with_fingerprint() {
         let cli = Cli::try_parse_from([
-            "helyos", "login", "https://h:6443", "--token", "nxa-api_x", "--ca-fingerprint", "9f:86",
-        ]).unwrap();
+            "helyos",
+            "login",
+            "https://h:6443",
+            "--token",
+            "nxa-api_x",
+            "--ca-fingerprint",
+            "9f:86",
+        ])
+        .unwrap();
         match cli.command {
-            Commands::Login { server, token, ca_fingerprint, .. } => {
+            Commands::Login {
+                server,
+                token,
+                ca_fingerprint,
+                ..
+            } => {
                 assert_eq!(server, "https://h:6443");
                 assert_eq!(token.as_deref(), Some("nxa-api_x"));
                 assert_eq!(ca_fingerprint.as_deref(), Some("9f:86"));

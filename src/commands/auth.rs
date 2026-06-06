@@ -42,7 +42,11 @@ pub async fn token_list(client: &HelyosClient) -> Result<()> {
                 t["scope"].as_str().unwrap_or("-").to_string(),
                 t["expires_at"].as_str().unwrap_or("never").to_string(),
                 t["last_used_at"].as_str().unwrap_or("never").to_string(),
-                if t["revoked_at"].is_string() { "yes".into() } else { "no".into() },
+                if t["revoked_at"].is_string() {
+                    "yes".into()
+                } else {
+                    "no".into()
+                },
             ]
         })
         .collect();

@@ -64,7 +64,10 @@ pub fn load() -> Config {
         Ok(contents) => parse(&contents),
         Err(e) if e.kind() == std::io::ErrorKind::NotFound => Config::default(),
         Err(e) => {
-            eprintln!("Warning: could not read config file {}: {e}", path.display());
+            eprintln!(
+                "Warning: could not read config file {}: {e}",
+                path.display()
+            );
             Config::default()
         }
     }
@@ -143,7 +146,10 @@ fn parse(contents: &str) -> Config {
     }
 
     // Legacy flat file (no [context.*] sections) → synthesize a "default" context.
-    if legacy_seen && (!legacy.server.is_empty() || legacy.token.is_some()) && cfg.contexts.is_empty() {
+    if legacy_seen
+        && (!legacy.server.is_empty() || legacy.token.is_some())
+        && cfg.contexts.is_empty()
+    {
         cfg.contexts.insert("default".to_string(), legacy);
     }
     cfg
@@ -269,7 +275,8 @@ impl Config {
 
     /// Save to the default config path (`config_path()`).
     pub fn save(&self) -> anyhow::Result<()> {
-        let path = config_path().ok_or_else(|| anyhow::anyhow!("could not determine config path"))?;
+        let path =
+            config_path().ok_or_else(|| anyhow::anyhow!("could not determine config path"))?;
         self.save_to(&path)
     }
 
@@ -340,8 +347,13 @@ mod tests {
     #[test]
     fn active_prefers_current_then_single() {
         let two = parse("[context.a]\nserver = http://a\n[context.b]\nserver = http://b\n");
-        assert!(two.active().is_none(), "ambiguous with 2 contexts and no current-context");
-        let cur = parse("current-context = a\n[context.a]\nserver = http://a\n[context.b]\nserver = http://b\n");
+        assert!(
+            two.active().is_none(),
+            "ambiguous with 2 contexts and no current-context"
+        );
+        let cur = parse(
+            "current-context = a\n[context.a]\nserver = http://a\n[context.b]\nserver = http://b\n",
+        );
         assert_eq!(cur.active().unwrap().server, "http://a");
         let one = parse("[context.only]\nserver = http://only\n");
         assert_eq!(one.active().unwrap().server, "http://only");
@@ -388,10 +400,20 @@ mod tests {
     fn save_to_writes_file_and_backup() {
         let dir = tempfile::tempdir().unwrap();
         let path = dir.path().join("config.toml");
-        std::fs::write(&path, "current-context = \"old\"\n[context.old]\nserver = http://old\n").unwrap();
+        std::fs::write(
+            &path,
+            "current-context = \"old\"\n[context.old]\nserver = http://old\n",
+        )
+        .unwrap();
 
         let mut cfg = Config::default();
-        cfg.contexts.insert("new".into(), Context { server: "http://new".into(), ..Default::default() });
+        cfg.contexts.insert(
+            "new".into(),
+            Context {
+                server: "http://new".into(),
+                ..Default::default()
+            },
+        );
         cfg.current_context = Some("new".into());
         cfg.save_to(&path).unwrap();
 
@@ -399,7 +421,10 @@ mod tests {
         assert_eq!(reloaded.current_context.as_deref(), Some("new"));
         assert!(reloaded.contexts.contains_key("new"));
         let bak = std::fs::read_to_string(path.with_extension("toml.bak")).unwrap();
-        assert!(bak.contains("context.old"), "backup must retain the prior file");
+        assert!(
+            bak.contains("context.old"),
+            "backup must retain the prior file"
+        );
     }
 
     #[cfg(unix)]
@@ -421,7 +446,10 @@ mod tests {
         cfg.rename("a", "a2").unwrap();
         assert_eq!(cfg.current_context.as_deref(), Some("a2"));
         cfg.remove("a2").unwrap();
-        assert!(cfg.current_context.is_none(), "removing the active context clears current");
+        assert!(
+            cfg.current_context.is_none(),
+            "removing the active context clears current"
+        );
         assert!(cfg.remove("a2").is_err());
     }
 }
