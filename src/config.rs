@@ -203,7 +203,6 @@ impl Config {
     }
 
     /// Insert or replace a context.
-    #[allow(dead_code)] // used by `helyos login` (M4)
     pub fn upsert(&mut self, name: &str, ctx: Context) {
         self.contexts.insert(name.to_string(), ctx);
     }

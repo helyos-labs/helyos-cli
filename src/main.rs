@@ -202,6 +202,42 @@ enum Commands {
 
     /// Show the identity of the active token
     Whoami,
+
+    /// Log in to a remote cluster: pin its CA and store a context
+    Login {
+        /// Server URL or host (assumes https:// and :6443 if omitted)
+        server: String,
+        /// Context name (default: derived from the host)
+        #[arg(long)]
+        name: Option<String>,
+        /// API token (else --token-stdin, $HELYOS_API_TOKEN, or interactive prompt)
+        #[arg(long)]
+        token: Option<String>,
+        /// Read the API token from stdin (one line)
+        #[arg(long)]
+        token_stdin: bool,
+        /// Trust this CA PEM file instead of fetching it (out-of-band)
+        #[arg(long)]
+        ca_file: Option<String>,
+        /// Require the fetched CA to match this sha256 (fail-closed, no prompt)
+        #[arg(long)]
+        ca_fingerprint: Option<String>,
+        /// Skip TLS verification entirely (insecure)
+        #[arg(long)]
+        insecure_skip_tls_verify: bool,
+        /// Default project for this context
+        #[arg(long)]
+        project: Option<String>,
+        /// Do not switch the active context to this one
+        #[arg(long)]
+        no_set_current: bool,
+    },
+
+    /// Log out: drop the token from a context (keep server + pinned CA)
+    Logout {
+        /// Context name (default: active)
+        name: Option<String>,
+    },
 }
 
 #[derive(Subcommand)]
@@ -463,6 +499,46 @@ async fn main() -> anyhow::Result<()> {
         return Ok(());
     }
 
+    // Handle login/logout before URL validation and shared client build.
+    // login does its own connection; logout is config-only.
+    if let Commands::Login {
+        server: srv,
+        name,
+        token: tok,
+        token_stdin,
+        ca_file,
+        ca_fingerprint,
+        insecure_skip_tls_verify,
+        project,
+        no_set_current,
+    } = &cli.command
+    {
+        let r = commands::login::login(commands::login::LoginArgs {
+            server: srv,
+            name: name.as_deref(),
+            token: tok.as_deref(),
+            token_stdin: *token_stdin,
+            ca_file: ca_file.as_deref(),
+            ca_fingerprint: ca_fingerprint.as_deref(),
+            insecure: *insecure_skip_tls_verify,
+            project: project.as_deref(),
+            no_set_current: *no_set_current,
+        })
+        .await;
+        if let Err(e) = r {
+            output::print_error(&e.to_string());
+            std::process::exit(1);
+        }
+        return Ok(());
+    }
+    if let Commands::Logout { name } = &cli.command {
+        if let Err(e) = commands::login::logout(name.as_deref()) {
+            output::print_error(&e.to_string());
+            std::process::exit(1);
+        }
+        return Ok(());
+    }
+
     // Validate --server URL
     if reqwest::Url::parse(&server).is_err() {
         output::print_error(&format!(
@@ -483,7 +559,12 @@ async fn main() -> anyhow::Result<()> {
         eprintln!("  Use --server https://... for production environments.\n");
     }
 
-    let client = client::HelyosClient::new(&server, token.as_deref());
+    use base64::Engine;
+    let ca_pem: Option<Vec<u8>> = active
+        .and_then(|c| c.ca.as_deref())
+        .and_then(|b64| base64::engine::general_purpose::STANDARD.decode(b64).ok());
+    let insecure = active.map(|c| c.insecure).unwrap_or(false);
+    let client = client::HelyosClient::new(&server, token.as_deref(), ca_pem.as_deref(), insecure);
 
     let result = match cli.command {
         Commands::Init { name, image } => commands::init(name.as_deref(), image.as_deref()),
@@ -646,6 +727,9 @@ async fn main() -> anyhow::Result<()> {
             },
         },
         Commands::Whoami => commands::auth::whoami(&client).await,
+        Commands::Login { .. } | Commands::Logout { .. } => {
+            unreachable!("handled before client build")
+        }
     };
 
     if let Err(e) = result {
@@ -815,5 +899,26 @@ mod tests {
         let cli = Cli::try_parse_from(["helyos", "--context", "staging", "whoami"]).unwrap();
         assert_eq!(cli.context.as_deref(), Some("staging"));
         assert!(matches!(cli.command, Commands::Whoami));
+    }
+
+    #[test]
+    fn parse_login_with_fingerprint() {
+        let cli = Cli::try_parse_from([
+            "helyos", "login", "https://h:6443", "--token", "nxa-api_x", "--ca-fingerprint", "9f:86",
+        ]).unwrap();
+        match cli.command {
+            Commands::Login { server, token, ca_fingerprint, .. } => {
+                assert_eq!(server, "https://h:6443");
+                assert_eq!(token.as_deref(), Some("nxa-api_x"));
+                assert_eq!(ca_fingerprint.as_deref(), Some("9f:86"));
+            }
+            _ => panic!("expected Login"),
+        }
+    }
+
+    #[test]
+    fn parse_logout_optional_name() {
+        let cli = Cli::try_parse_from(["helyos", "logout"]).unwrap();
+        assert!(matches!(cli.command, Commands::Logout { name: None }));
     }
 }
