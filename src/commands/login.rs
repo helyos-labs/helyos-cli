@@ -106,7 +106,7 @@ fn normalize_server(input: &str) -> String {
     } else {
         format!("https://{s}")
     };
-    let after_scheme = s.splitn(2, "://").nth(1).unwrap_or("");
+    let after_scheme = s.split_once("://").map(|x| x.1).unwrap_or("");
     let authority = after_scheme.split('/').next().unwrap_or("");
     if authority.contains(':') {
         s
@@ -206,8 +206,8 @@ fn fingerprints_match(a: &str, b: &str) -> bool {
 
 fn derive_name(server: &str) -> String {
     let host = server
-        .splitn(2, "://")
-        .nth(1)
+        .split_once("://")
+        .map(|x| x.1)
         .unwrap_or(server)
         .split('/')
         .next()
