@@ -5,6 +5,7 @@ pub mod deploy;
 pub mod deployments;
 pub mod init;
 pub mod lifecycle;
+pub mod login;
 pub mod logs;
 pub mod node;
 pub mod nodes;
