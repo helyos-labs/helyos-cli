@@ -483,7 +483,7 @@ async fn main() -> anyhow::Result<()> {
         eprintln!("  Use --server https://... for production environments.\n");
     }
 
-    let client = client::HelyosClient::new(&server, token.as_deref());
+    let client = client::HelyosClient::new(&server, token.as_deref(), None, false);
 
     let result = match cli.command {
         Commands::Init { name, image } => commands::init(name.as_deref(), image.as_deref()),

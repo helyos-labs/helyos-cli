@@ -37,25 +37,52 @@ fn error_hint(status: reqwest::StatusCode) -> Option<&'static str> {
     }
 }
 
+/// SHA-256 of bytes, formatted as lowercase colon-separated hex pairs — matches
+/// the daemon's `GET /api/v1/ca` `sha256` field.
+pub fn fingerprint_sha256(bytes: &[u8]) -> String {
+    use sha2::{Digest, Sha256};
+    let hexed = hex::encode(Sha256::digest(bytes));
+    hexed
+        .as_bytes()
+        .chunks(2)
+        .map(|c| std::str::from_utf8(c).unwrap())
+        .collect::<Vec<_>>()
+        .join(":")
+}
+
 pub struct HelyosClient {
     base_url: String,
     http: Client,
 }
 
 impl HelyosClient {
-    pub fn new(base_url: &str, token: Option<&str>) -> Self {
+    /// Build a client. When `insecure` is true the server cert is NOT verified.
+    /// Otherwise, if `ca_pem` is given, ONLY that CA is trusted (true pinning);
+    /// if `ca_pem` is None, the system root store is used.
+    pub fn new(base_url: &str, token: Option<&str>, ca_pem: Option<&[u8]>, insecure: bool) -> Self {
         let mut headers = HeaderMap::new();
         if let Some(t) = token {
             if let Ok(val) = HeaderValue::from_str(&format!("Bearer {t}")) {
                 headers.insert(AUTHORIZATION, val);
             }
         }
-        let http = Client::builder()
+        let mut builder = Client::builder()
             .default_headers(headers)
             .connect_timeout(Duration::from_secs(5))
-            .timeout(Duration::from_secs(30))
-            .build()
-            .expect("failed to build HTTP client");
+            .timeout(Duration::from_secs(30));
+        if insecure {
+            builder = builder.danger_accept_invalid_certs(true);
+        } else if let Some(pem) = ca_pem {
+            match reqwest::Certificate::from_pem(pem) {
+                Ok(cert) => {
+                    builder = builder
+                        .add_root_certificate(cert)
+                        .tls_built_in_root_certs(false);
+                }
+                Err(e) => eprintln!("Warning: ignoring unparseable pinned CA: {e}"),
+            }
+        }
+        let http = builder.build().expect("failed to build HTTP client");
         Self {
             base_url: base_url.trim_end_matches('/').to_string(),
             http,
@@ -326,13 +353,20 @@ mod tests {
 
     #[test]
     fn base_url_trailing_slashes_trimmed() {
-        let c = HelyosClient::new("http://localhost:6443///", None);
+        let c = HelyosClient::new("http://localhost:6443///", None, None, false);
         assert_eq!(c.base_url(), "http://localhost:6443");
     }
 
     #[test]
     fn base_url_without_trailing_slash_unchanged() {
-        let c = HelyosClient::new("http://10.0.0.1:6443", Some("tok"));
+        let c = HelyosClient::new("http://10.0.0.1:6443", Some("tok"), None, false);
         assert_eq!(c.base_url(), "http://10.0.0.1:6443");
+    }
+
+    #[test]
+    fn fingerprint_is_colon_hex() {
+        let fp = fingerprint_sha256(b"hello");
+        assert!(fp.starts_with("2c:f2:4d:ba"), "got {fp}");
+        assert_eq!(fp.matches(':').count(), 31, "32 bytes → 31 separators");
     }
 }
