@@ -36,9 +36,9 @@ replicas: 1
 
 # volumes:
 #   - name: data
-#     mount_path: /app/data
+#     mount: /app/data
 
-# restart: always  # always | on_failure | never
+# restart: always  # always | onfailure | never
 "#
     )
 }
@@ -137,5 +137,69 @@ mod tests {
             value["project"],
             serde_yaml_ng::Value::String("test".into())
         );
+    }
+
+    /// Uncomment every example section (everything but the doc-header comments)
+    /// and feed it to the real deployment parser — exactly what a user gets when
+    /// they uncomment a block in the scaffold. Catches example fields whose names
+    /// the parser does not accept.
+    fn uncomment_examples(template: &str) -> String {
+        template
+            .lines()
+            .filter(|l| !l.starts_with("# Helyos") && !l.starts_with("# Docs"))
+            .map(|l| {
+                if let Some(rest) = l.strip_prefix("# ") {
+                    rest.to_string()
+                } else if l == "#" {
+                    String::new()
+                } else {
+                    l.to_string()
+                }
+            })
+            .collect::<Vec<_>>()
+            .join("\n")
+    }
+
+    #[test]
+    fn uncommented_template_parses_as_valid_spec() {
+        let template = generate_template("shop", "api", "nginx:alpine");
+        let yaml = uncomment_examples(&template);
+
+        let spec = helyos_core::config::parse_deployment(&yaml)
+            .expect("uncommented scaffold template must parse as a valid deployment spec");
+
+        assert_eq!(spec.volumes.len(), 1);
+        assert_eq!(spec.volumes[0].mount_point(), "/app/data");
+    }
+
+    #[test]
+    fn restart_legend_lists_only_real_policy_values() {
+        use helyos_core::domain::models::RestartPolicy;
+
+        let template = generate_template("shop", "api", "nginx:alpine");
+        let line = template
+            .lines()
+            .find(|l| l.contains("restart:"))
+            .expect("template documents a restart policy");
+
+        // The legend is the inline `# always | … | …` after the example value.
+        let legend = line.rsplit('#').next().unwrap();
+        let values: Vec<&str> = legend
+            .split('|')
+            .map(str::trim)
+            .filter(|s| !s.is_empty())
+            .collect();
+        assert!(
+            !values.is_empty(),
+            "restart legend should list policy values"
+        );
+
+        for v in values {
+            let parsed: std::result::Result<RestartPolicy, _> = serde_yaml_ng::from_str(v);
+            assert!(
+                parsed.is_ok(),
+                "restart legend lists `{v}`, which is not a valid RestartPolicy value"
+            );
+        }
     }
 }
