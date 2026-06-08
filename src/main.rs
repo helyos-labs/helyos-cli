@@ -571,12 +571,11 @@ async fn main() -> anyhow::Result<()> {
         Commands::Deploy { file, timeout } => commands::deploy(&client, &file, timeout).await,
         Commands::Status => commands::status(&client).await,
         Commands::Top => commands::top::top(client, &server, token.as_deref()).await,
-        Commands::Pods { project } => {
-            let project = project.or_else(|| default_project.clone());
-            commands::pods(&client, project.as_deref()).await
-        }
+        // Read-only listings show everything by default; filter only when the user
+        // passes -p explicitly. (Don't silently scope to the context's default project
+        // — that made `helyos deployments` show nothing while `helyos status` showed N.)
+        Commands::Pods { project } => commands::pods(&client, project.as_deref()).await,
         Commands::Deployments { project } => {
-            let project = project.or_else(|| default_project.clone());
             commands::deployments(&client, project.as_deref()).await
         }
         Commands::Logs {
@@ -681,10 +680,7 @@ async fn main() -> anyhow::Result<()> {
             NodeCommands::Drain { name } => commands::node::drain(&client, &name).await,
             NodeCommands::Rm { name } => commands::node::remove(&client, &name).await,
         },
-        Commands::Routes { project } => {
-            let project = project.or_else(|| default_project.clone());
-            commands::route::list(&client, project.as_deref()).await
-        }
+        Commands::Routes { project } => commands::route::list(&client, project.as_deref()).await,
         Commands::Route { command } => match command {
             RouteCommands::Add {
                 domain,
